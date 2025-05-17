@@ -1,6 +1,6 @@
-use regex::Regex;
-
 use std::process::Command;
+
+use regex::Regex;
 
 const TMUX: &str = "tmux";
 
