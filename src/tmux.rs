@@ -2,9 +2,16 @@ use regex::Regex;
 
 use std::process::Command;
 
-use super::fzf::Window;
-
 const TMUX: &str = "tmux";
+
+pub(crate) struct Window {
+    pub(crate) session_name: String,
+    pub(crate) index: String,
+    pub(crate) name: String,
+    pub(crate) actvie: bool,
+    pub(crate) last_flag: bool,
+    pub(crate) marked: bool,
+}
 
 pub(crate) fn get_all_windows(current_session: &str) -> Vec<Window> {
     let fields = concat!(

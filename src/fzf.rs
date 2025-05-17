@@ -4,6 +4,8 @@ use std::cmp::Ordering::Greater;
 
 use std::cmp::Ordering::Less;
 
+use super::tmux::Window;
+
 pub(crate) fn sort_windows(windows: &mut [Window]) {
     // Sort windows by active, marked, last and others
     windows.sort_by(|a, b| {
@@ -62,15 +64,6 @@ pub(crate) fn select_window<'a>(
         .expect("Selected window not found");
 
     Some(selected_window)
-}
-
-pub(crate) struct Window {
-    pub(crate) session_name: String,
-    pub(crate) index: String,
-    pub(crate) name: String,
-    pub(crate) actvie: bool,
-    pub(crate) last_flag: bool,
-    pub(crate) marked: bool,
 }
 
 impl std::fmt::Display for Window {
