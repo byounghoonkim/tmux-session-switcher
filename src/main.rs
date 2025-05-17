@@ -3,6 +3,8 @@ use std::process::Command;
 
 use regex::Regex;
 
+const TMUX: &str = "tmux";
+
 fn main() {
     let current_session = get_current_session();
     let mut windows = get_all_windows(&current_session);
@@ -35,14 +37,22 @@ fn sort_windows(windows: &mut [Window]) {
 }
 
 fn select_window(windows: &[Window]) -> Option<&Window> {
+    let fzf_tmux = concat!(
+        r#"
+        fzf-tmux \
+            -p 80,36 \
+            --border-label ' Select window ' \
+            --prompt '⚡' \
+            --bind 'tab:down,btab:up'
+        "#
+    );
+
     let select_result = Command::new("sh")
         .arg("-c")
         .arg(format!(
-            "echo '{}' | fzf-tmux -p 80,36 --border-label ' Select window ' --prompt '⚡' --bind 'tab:down,btab:up'",
-            windows
-                .iter()
-                .map(|w| w.to_string())
-                .collect::<String>()
+            "echo '{}' | {}",
+            windows.iter().map(|w| w.to_string()).collect::<String>(),
+            fzf_tmux,
         ))
         .output()
         .expect("Failed to execute fzf-tmux")
@@ -60,7 +70,7 @@ fn select_window(windows: &[Window]) -> Option<&Window> {
 }
 
 fn switch_window(selected_window: &Window) {
-    Command::new("tmux")
+    Command::new(TMUX)
         .args([
             "switch",
             "-t",
@@ -95,13 +105,17 @@ impl std::fmt::Display for Window {
 }
 
 fn get_all_windows(current_session: &str) -> Vec<Window> {
-    let all_windows = Command::new("tmux")
-        .args([
-            "list-windows",
-            "-a",
-            "-F",
-            "#{session_name}|#{window_index}|#{window_name}|#{window_active}|#{window_last_flag}|#{window_marked_flag}",
-        ])
+    let fields = concat!(
+        "#{session_name}|",
+        "#{window_index}|",
+        "#{window_name}|",
+        "#{window_active}|",
+        "#{window_last_flag}|",
+        "#{window_marked_flag}|"
+    );
+
+    let all_windows = Command::new(TMUX)
+        .args(["list-windows", "-a", "-F", fields])
         .output()
         .expect("Failed to execute tmux command")
         .stdout;
@@ -127,7 +141,7 @@ fn get_all_windows(current_session: &str) -> Vec<Window> {
 }
 
 fn get_current_session() -> String {
-    let current_session = Command::new("tmux")
+    let current_session = Command::new(TMUX)
         .args(["display-message", "-p", "#S"])
         .output()
         .expect("Failed to execute tmux command")
