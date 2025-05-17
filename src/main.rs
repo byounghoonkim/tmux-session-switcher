@@ -8,7 +8,7 @@ fn main() {
     let mut windows = get_all_windows(&current_session);
     sort_windows(&mut windows);
     if let Some(sw) = select_window(&windows) {
-        change_window(sw);
+        switch_window(sw);
     }
 }
 
@@ -59,7 +59,7 @@ fn select_window(windows: &[Window]) -> Option<&Window> {
     Some(selected_window)
 }
 
-fn change_window(selected_window: &Window) {
+fn switch_window(selected_window: &Window) {
     // Switch to the selected window
     Command::new("tmux")
         .args([
@@ -85,7 +85,7 @@ impl std::fmt::Display for Window {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "{} - {} - {}{}{}{}",
+            "{:15} - {:3} - {}{}{}{}",
             self.session_name,
             self.index,
             self.name,
