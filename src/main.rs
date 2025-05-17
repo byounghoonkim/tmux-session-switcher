@@ -60,7 +60,6 @@ fn select_window(windows: &[Window]) -> Option<&Window> {
 }
 
 fn switch_window(selected_window: &Window) {
-    // Switch to the selected window
     Command::new("tmux")
         .args([
             "switch",
@@ -80,7 +79,6 @@ struct Window {
     marked: bool,
 }
 
-//convert from trait Window to string
 impl std::fmt::Display for Window {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
@@ -97,7 +95,6 @@ impl std::fmt::Display for Window {
 }
 
 fn get_all_windows(current_session: &str) -> Vec<Window> {
-    // Get all tmux windows
     let all_windows = Command::new("tmux")
         .args([
             "list-windows",
@@ -111,7 +108,6 @@ fn get_all_windows(current_session: &str) -> Vec<Window> {
 
     let all_windows = String::from_utf8_lossy(&all_windows);
 
-    // Parse windows
     let mut windows = Vec::new();
     let re = Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap();
     for line in all_windows.lines() {
@@ -136,6 +132,5 @@ fn get_current_session() -> String {
         .output()
         .expect("Failed to execute tmux command")
         .stdout;
-    let current_session = String::from_utf8_lossy(&current_session).trim().to_string();
-    current_session
+    String::from_utf8_lossy(&current_session).trim().to_string()
 }
