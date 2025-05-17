@@ -1,15 +1,104 @@
-use regex::Regex;
+use std::cmp::Ordering::{Greater, Less};
 use std::process::Command;
 
-fn main() {
-    // Get the current tmux session
-    let current_session = Command::new("tmux")
-        .args(["display-message", "-p", "#S"])
-        .output()
-        .expect("Failed to execute tmux command")
-        .stdout;
-    let current_session = String::from_utf8_lossy(&current_session).trim().to_string();
+use regex::Regex;
 
+fn main() {
+    let current_session = get_current_session();
+    let mut windows = get_all_windows(&current_session);
+    sort_windows(&mut windows);
+    let selected_window = match select_window(&windows) {
+        Some(value) => value,
+        None => return,
+    };
+    change_window(selected_window);
+}
+
+fn sort_windows(windows: &mut [Window]) {
+    // Sort windows by active, marked, last and others
+    windows.sort_by(|a, b| {
+        if a.actvie && !b.actvie {
+            return Less;
+        } else if !a.actvie && b.actvie {
+            return Greater;
+        }
+        if a.marked && !b.marked {
+            return Less;
+        } else if !a.marked && b.marked {
+            return Greater;
+        }
+        if a.last_flag && !b.last_flag {
+            return Less;
+        } else if !a.last_flag && b.last_flag {
+            return Greater;
+        }
+        std::cmp::Ordering::Equal
+    });
+}
+
+fn select_window(windows: &[Window]) -> Option<&Window> {
+    let select_result = Command::new("sh")
+        .arg("-c")
+        .arg(format!(
+            "echo '{}' | fzf-tmux -p 80,36 --border-label ' Select window ' --prompt '⚡' --bind 'tab:down,btab:up'",
+            windows
+                .iter()
+                .map(|w| w.to_string())
+                .collect::<String>()
+        ))
+        .output()
+        .expect("Failed to execute fzf-tmux")
+        .stdout;
+    let select_result = String::from_utf8_lossy(&select_result).trim().to_string();
+    if select_result.is_empty() {
+        return None;
+    }
+    let selected_window = windows
+        .iter()
+        .find(|w| w.to_string().trim() == select_result)
+        .expect("Selected window not found");
+
+    Some(selected_window)
+}
+
+fn change_window(selected_window: &Window) {
+    // Switch to the selected window
+    Command::new("tmux")
+        .args([
+            "switch",
+            "-t",
+            &format!("{}:{}", selected_window.session_name, selected_window.index,),
+        ])
+        .status()
+        .expect("Failed to execute tmux switch");
+}
+
+struct Window {
+    session_name: String,
+    index: String,
+    name: String,
+    actvie: bool,
+    last_flag: bool,
+    marked: bool,
+}
+
+//convert from trait Window to string
+impl std::fmt::Display for Window {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "{} - {} - {}{}{}{}",
+            self.session_name,
+            self.index,
+            self.name,
+            if self.actvie { " 🟢" } else { "" },
+            if self.last_flag { "  ⃝" } else { "" },
+            if self.marked { " ♥️" } else { "" },
+        )
+    }
+}
+
+fn get_all_windows(current_session: &str) -> Vec<Window> {
     // Get all tmux windows
     let all_windows = Command::new("tmux")
         .args([
@@ -21,6 +110,7 @@ fn main() {
         .output()
         .expect("Failed to execute tmux command")
         .stdout;
+
     let all_windows = String::from_utf8_lossy(&all_windows);
 
     // Parse windows
@@ -28,76 +118,26 @@ fn main() {
     let re = Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap();
     for line in all_windows.lines() {
         if let Some(captures) = re.captures(line) {
-            windows.push((
-                captures[1].to_string(),
-                captures[2].to_string(),
-                captures[3].to_string(),
-                captures[4].to_string(),
-                captures[5].to_string(),
-                captures[6].to_string(),
-            ));
+            windows.push(Window {
+                session_name: captures[1].to_string(),
+                index: captures[2].to_string(),
+                name: captures[3].to_string(),
+                actvie: &captures[4] == "1" && &captures[1] == current_session,
+                last_flag: &captures[5] == "1",
+                marked: &captures[6] == "1",
+            });
         }
     }
 
-    // Build window lists
-    let mut windows_lists = String::new();
-    let mut recent_windows = String::new();
-    let mut active_window = String::new();
+    windows
+}
 
-    for window in &windows {
-        let mut windows_list = format!("{} - {} - {}", window.0, window.1, window.2);
-
-        if window.0 == current_session && window.3 == "1" {
-            windows_list.push_str(" 🟢");
-        } else if window.4 == "1" {
-            windows_list.push_str("  ⃝");
-        }
-        if window.5 == "1" {
-            windows_list.push_str(" ♥️");
-        }
-        windows_list.push('\n');
-
-        if window.0 == current_session && window.3 == "1" {
-            active_window = windows_list.clone();
-        } else if window.4 == "1" || window.5 == "1" {
-            recent_windows.push_str(&windows_list);
-        } else {
-            windows_lists.push_str(&windows_list);
-        }
-    }
-
-    windows_lists = format!("{}{}{}", active_window, recent_windows, windows_lists);
-
-    // Use fzf-tmux to select a window
-    let select_window = Command::new("sh")
-        .arg("-c")
-        .arg(format!(
-            "echo '{}' | fzf-tmux -p 80,36 --border-label ' Select window ' --prompt '⚡' --bind 'tab:down,btab:up'",
-            windows_lists
-        ))
+fn get_current_session() -> String {
+    let current_session = Command::new("tmux")
+        .args(["display-message", "-p", "#S"])
         .output()
-        .expect("Failed to execute fzf-tmux")
+        .expect("Failed to execute tmux command")
         .stdout;
-    let select_window = String::from_utf8_lossy(&select_window).trim().to_string();
-
-    if select_window.is_empty() {
-        return;
-    }
-
-    // Parse the selected window
-    let re_select = Regex::new(r"([\w\-]+)\s-\s(\d+)\s-").unwrap();
-    if let Some(captures) = re_select.captures(&select_window) {
-        let session_name = &captures[1];
-        let window_index = &captures[2];
-
-        // Switch to the selected window
-        Command::new("tmux")
-            .args([
-                "switch",
-                "-t",
-                &format!("{}:{}", session_name, window_index),
-            ])
-            .status()
-            .expect("Failed to execute tmux switch");
-    }
+    let current_session = String::from_utf8_lossy(&current_session).trim().to_string();
+    current_session
 }
