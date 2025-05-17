@@ -7,11 +7,9 @@ fn main() {
     let current_session = get_current_session();
     let mut windows = get_all_windows(&current_session);
     sort_windows(&mut windows);
-    let selected_window = match select_window(&windows) {
-        Some(value) => value,
-        None => return,
-    };
-    change_window(selected_window);
+    if let Some(sw) = select_window(&windows) {
+        change_window(sw);
+    }
 }
 
 fn sort_windows(windows: &mut [Window]) {
