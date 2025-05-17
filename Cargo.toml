@@ -1,5 +1,5 @@
 [package]
-name = "switch-rust"
+name = "tmux-session-switcher"
 version = "0.1.0"
 edition = "2024"
 
