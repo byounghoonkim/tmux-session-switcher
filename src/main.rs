@@ -1,15 +1,30 @@
 use std::cmp::Ordering::{Greater, Less};
 use std::process::Command;
 
+use clap::Parser;
 use regex::Regex;
 
 const TMUX: &str = "tmux";
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Size of the fzf window
+    #[arg(short, long, default_value = "80,36")]
+    size: String,
+
+    /// Title of the fzf window
+    #[arg(short, long, default_value = "Select Window")]
+    title: String,
+}
+
 fn main() {
+    let args = Args::parse();
+
     let current_session = get_current_session();
     let mut windows = get_all_windows(&current_session);
     sort_windows(&mut windows);
-    if let Some(sw) = select_window(&windows) {
+    if let Some(sw) = select_window(&windows, &args.size, &args.title) {
         switch_window(sw);
     }
 }
@@ -36,15 +51,16 @@ fn sort_windows(windows: &mut [Window]) {
     });
 }
 
-fn select_window(windows: &[Window]) -> Option<&Window> {
-    let fzf_tmux = concat!(
+fn select_window<'a>(windows: &'a [Window], size: &'a str, title: &str) -> Option<&'a Window> {
+    let fzf_tmux = format!(
         r#"
         fzf-tmux \
-            -p 80,36 \
-            --border-label ' Select window ' \
+            -p {} \
+            --border-label ' {} ' \
             --prompt '⚡' \
             --bind 'tab:down,btab:up'
-        "#
+        "#,
+        size, title
     );
 
     let select_result = Command::new("sh")
