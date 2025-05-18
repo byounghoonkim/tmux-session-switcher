@@ -48,8 +48,6 @@ impl Switchable for Favorite {
         args.push("-n".to_string());
         args.push(self.name.clone());
 
-        println!("Switching to favorite: {:?}", args);
-
         Command::new(TMUX)
             .args(args)
             .status()
@@ -88,4 +86,3 @@ impl SortPriority for Favorite {
 }
 
 impl Item for Favorite {}
-
