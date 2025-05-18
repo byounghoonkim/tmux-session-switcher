@@ -17,19 +17,13 @@ impl Switchable for Favorite {
         let mut args: Vec<String> = Vec::new();
         args.push("new-window".to_string());
 
-        let target = if let Some(session_name) = &self.session_name {
-            if let Some(index) = &self.index {
-                Some(format!("{}:{}", session_name, index))
-            } else {
-                Some(format!("{}", session_name))
-            }
-        } else {
-            if let Some(index) = &self.index {
-                Some(format!("{}", index))
-            } else {
-                None
-            }
+        let target = match (&self.session_name, &self.index) {
+            (Some(session_name), Some(index)) => Some(format!("{}:{}", session_name, index)),
+            (Some(session_name), None) => Some(session_name.to_string()),
+            (None, Some(index)) => Some(index.to_string()),
+            (None, None) => None,
         };
+
         if let Some(target) = target {
             args.push("-t".to_string());
             args.push(target);
@@ -46,7 +40,7 @@ impl Switchable for Favorite {
         }
 
         args.push("-n".to_string());
-        args.push(self.name.clone());
+        args.push(self.name.to_string());
 
         Command::new(TMUX)
             .args(args)
@@ -81,7 +75,7 @@ impl std::fmt::Display for Favorite {
 
 impl SortPriority for Favorite {
     fn sort_priority(&self) -> f32 {
-        return 0.5;
+        0.5
     }
 }
 
