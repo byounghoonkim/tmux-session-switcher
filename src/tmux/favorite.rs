@@ -58,9 +58,7 @@ impl std::fmt::Display for Favorite {
             f,
             "{:15} - {:3} - {} ⭐️ {}",
             self.session_name.as_ref().unwrap_or(&"".to_string()),
-            self.index
-                .map(|i| i.to_string())
-                .unwrap_or_else(|| "".to_string()),
+            self.index.map(|i| i.to_string()).unwrap_or_default(),
             self.name,
             self.path.as_ref().unwrap_or(&"".to_string()),
         )
