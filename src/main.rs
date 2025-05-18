@@ -1,9 +1,10 @@
 use clap::Parser;
 
+use tmux::Item;
+
+mod config;
 mod fzf;
 mod tmux;
-use tmux::Item;
-use tmux::favorite::Favorite;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -15,22 +16,26 @@ struct Args {
     /// Title of the fzf window
     #[arg(short, long, default_value = "Select Window")]
     title: String,
+
+    /// Path to the config file
+    #[arg(
+        short,
+        long,
+        default_value = "~/.config/tmux-session-switcher/config.toml"
+    )]
+    config: String,
 }
 
 fn main() {
     let args = Args::parse();
+    let config = config::Config::new(&args.config);
 
     let mut ws: Vec<Box<dyn Item>> = Vec::new();
 
-    // TODO: load favorites from a file or config
-    ws.push(Box::new(Favorite {
-        name: "TestFavorites".to_string(),
-        session_name: Some("WORK".to_string()),
-        //session_name: None,
-        index: Some("3".to_string()),
-        //index: None,
-        path: Some("~/oss".to_string()),
-    }));
+    // Add favorites from config
+    for favorite in &config.favorites {
+        ws.push(Box::new(favorite.clone()));
+    }
 
     let current_session = tmux::get_current_session();
     let windows = tmux::get_running_windows(&current_session);

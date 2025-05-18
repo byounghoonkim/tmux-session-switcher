@@ -1,10 +1,13 @@
 use std::process::Command;
 
+use serde::Deserialize;
+
 use crate::tmux::Item;
 use crate::tmux::SortPriority;
 use crate::tmux::Switchable;
 use crate::tmux::TMUX;
 
+#[derive(Deserialize, Clone, Debug)]
 pub(crate) struct Favorite {
     pub(crate) name: String,
     pub(crate) session_name: Option<String>,
@@ -27,42 +30,25 @@ impl Switchable for Favorite {
         if let Some(target) = target {
             args.push("-t".to_string());
             args.push(target);
-            // -k : overwrite(kill) the existing target window
-            args.push("-k".to_string());
+            args.push("-k".to_string()); // -k : overwrite(kill) the existing target window
         } else {
-            // -S : specify to reuse the name if there is no target
-            args.push("-S".to_string());
+            args.push("-S".to_string()); // -S : specify to reuse the name if there is no target
         }
+
+        args.push("-n".to_string());
+        args.push(self.name.to_string());
+
+        //args.push("-P".to_string()); // -P : print the info of the new window to stdout
 
         if let Some(path) = &self.path {
             args.push("-c".to_string());
             args.push(path.to_string());
         }
 
-        args.push("-n".to_string());
-        args.push(self.name.to_string());
-
-        args.push("-F".to_string());
-        let fields = "#{session_name}:#{window_index}";
-        args.push(fields.to_string());
-        args.push("-P".to_string());
-
-        let output = Command::new(TMUX)
-            .args(args)
-            .output()
-            .expect("Failed to execute tmux switch")
-            .stdout;
-
-        let output = String::from_utf8_lossy(&output);
-        let output = output.trim();
-        if output.is_empty() {
-            return;
-        }
-
         Command::new(TMUX)
-            .args(["switch", "-t", output])
+            .args(args)
             .status()
-            .expect("Failed to execute tmux switch");
+            .expect("Failed to execute tmux windows create");
     }
 }
 
