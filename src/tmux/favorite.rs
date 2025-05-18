@@ -11,7 +11,7 @@ use crate::tmux::TMUX;
 pub(crate) struct Favorite {
     pub(crate) name: String,
     pub(crate) session_name: Option<String>,
-    pub(crate) index: Option<String>,
+    pub(crate) index: Option<u16>,
     pub(crate) path: Option<String>,
 }
 
@@ -58,7 +58,9 @@ impl std::fmt::Display for Favorite {
             f,
             "{:15} - {:3} - {} ⭐️ {}",
             self.session_name.as_ref().unwrap_or(&"".to_string()),
-            self.index.as_ref().unwrap_or(&"".to_string()),
+            self.index
+                .map(|i| i.to_string())
+                .unwrap_or_else(|| "".to_string()),
             self.name,
             self.path.as_ref().unwrap_or(&"".to_string()),
         )

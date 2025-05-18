@@ -1,4 +1,7 @@
+use std::path::PathBuf;
+
 use clap::Parser;
+use home::home_dir;
 
 use tmux::Item;
 
@@ -26,9 +29,21 @@ struct Args {
     config: String,
 }
 
+fn expand_tilde(path: &str) -> PathBuf {
+    if path.starts_with("~") {
+        let home = home_dir().expect("Could not determine home directory");
+        return if path == "~" {
+            home
+        } else {
+            home.join(path.strip_prefix("~/").unwrap_or(path))
+        };
+    }
+    PathBuf::from(path)
+}
+
 fn main() {
     let args = Args::parse();
-    let config = config::Config::new(&args.config);
+    let config = config::Config::new(expand_tilde(&args.config).to_str().unwrap());
 
     let mut ws: Vec<Box<dyn Item>> = Vec::new();
 
