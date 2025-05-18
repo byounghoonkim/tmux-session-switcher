@@ -33,8 +33,10 @@ fn main() {
     let mut ws: Vec<Box<dyn Item>> = Vec::new();
 
     // Add favorites from config
-    for favorite in &config.favorites {
-        ws.push(Box::new(favorite.clone()));
+    if let Some(favorites) = config.favorites {
+        for favorite in favorites {
+            ws.push(Box::new(favorite));
+        }
     }
 
     let current_session = tmux::get_current_session();
