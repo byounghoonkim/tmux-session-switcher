@@ -2,6 +2,8 @@ use clap::Parser;
 
 mod fzf;
 mod tmux;
+use tmux::Item;
+use tmux::favorite::Favorite;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -18,10 +20,22 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
+    let mut ws: Vec<Box<dyn Item>> = Vec::new();
+    ws.push(Box::new(Favorite {
+        name: "TestFavorites".to_string(),
+        session_name: None,
+        index: None,
+        path: None,
+    }));
+
     let current_session = tmux::get_current_session();
-    let mut windows = tmux::get_all_windows(&current_session);
-    fzf::sort_windows(&mut windows);
-    if let Some(sw) = fzf::select_window(&windows, &args.size, &args.title) {
-        tmux::switch_window(sw);
+    let windows = tmux::get_running_windows(&current_session);
+    for window in &windows {
+        ws.push(Box::new(window.clone()));
+    }
+
+    fzf::sort_windows(&mut ws);
+    if let Some(sw) = fzf::select_item::<dyn Item>(&ws, &args.size, &args.title) {
+        sw.switch_window();
     }
 }

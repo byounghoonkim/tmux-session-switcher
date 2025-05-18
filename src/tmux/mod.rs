@@ -1,19 +1,24 @@
+use std::fmt::Display;
 use std::process::Command;
 
 use regex::Regex;
 
 const TMUX: &str = "tmux";
 
-pub(crate) struct Window {
-    pub(crate) session_name: String,
-    pub(crate) index: String,
-    pub(crate) name: String,
-    pub(crate) actvie: bool,
-    pub(crate) last_flag: bool,
-    pub(crate) marked: bool,
+pub mod favorite;
+pub mod window;
+
+pub(crate) trait Item: Display + SortPriority + Switchable {}
+
+pub(crate) trait SortPriority {
+    fn sort_priority(&self) -> f32;
 }
 
-pub(crate) fn get_all_windows(current_session: &str) -> Vec<Window> {
+pub(crate) trait Switchable {
+    fn switch_window(&self);
+}
+
+pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> {
     let fields = concat!(
         "#{session_name}|",
         "#{window_index}|",
@@ -35,7 +40,7 @@ pub(crate) fn get_all_windows(current_session: &str) -> Vec<Window> {
     let re = Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap();
     for line in all_windows.lines() {
         if let Some(captures) = re.captures(line) {
-            windows.push(Window {
+            windows.push(window::Window {
                 session_name: captures[1].to_string(),
                 index: captures[2].to_string(),
                 name: captures[3].to_string(),
@@ -47,17 +52,6 @@ pub(crate) fn get_all_windows(current_session: &str) -> Vec<Window> {
     }
 
     windows
-}
-
-pub(crate) fn switch_window(selected_window: &Window) {
-    Command::new(TMUX)
-        .args([
-            "switch",
-            "-t",
-            &format!("{}:{}", selected_window.session_name, selected_window.index,),
-        ])
-        .status()
-        .expect("Failed to execute tmux switch");
 }
 
 pub(crate) fn get_current_session() -> String {

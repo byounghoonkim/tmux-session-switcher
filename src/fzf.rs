@@ -1,38 +1,26 @@
+use std::cmp::Ordering::Greater;
+use std::cmp::Ordering::Less;
+use std::fmt::Display;
 use std::process::Command;
 
-use std::cmp::Ordering::Greater;
+use super::tmux::SortPriority;
 
-use std::cmp::Ordering::Less;
-
-use super::tmux::Window;
-
-pub(crate) fn sort_windows(windows: &mut [Window]) {
-    // Sort windows by active, marked, last and others
-    windows.sort_by(|a, b| {
-        if a.actvie && !b.actvie {
-            return Less;
-        } else if !a.actvie && b.actvie {
+pub(crate) fn sort_windows<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
+    items.sort_by(|a, b| {
+        if a.sort_priority() > b.sort_priority() {
             return Greater;
-        }
-        if a.marked && !b.marked {
+        } else if a.sort_priority() < b.sort_priority() {
             return Less;
-        } else if !a.marked && b.marked {
-            return Greater;
-        }
-        if a.last_flag && !b.last_flag {
-            return Less;
-        } else if !a.last_flag && b.last_flag {
-            return Greater;
         }
         std::cmp::Ordering::Equal
     });
 }
 
-pub(crate) fn select_window<'a>(
-    windows: &'a [Window],
+pub(crate) fn select_item<'a, T: Display + ?Sized>(
+    items: &'a [Box<T>],
     size: &'a str,
     title: &str,
-) -> Option<&'a Window> {
+) -> Option<&'a T> {
     let fzf_tmux = format!(
         r#"
         fzf-tmux \
@@ -48,7 +36,7 @@ pub(crate) fn select_window<'a>(
         .arg("-c")
         .arg(format!(
             "echo '{}' | {}",
-            windows.iter().map(|w| w.to_string()).collect::<String>(),
+            items.iter().map(|w| w.to_string()).collect::<String>(),
             fzf_tmux,
         ))
         .output()
@@ -58,25 +46,10 @@ pub(crate) fn select_window<'a>(
     if select_result.is_empty() {
         return None;
     }
-    let selected_window = windows
+    let selected_item = items
         .iter()
         .find(|w| w.to_string().trim() == select_result)
         .expect("Selected window not found");
 
-    Some(selected_window)
-}
-
-impl std::fmt::Display for Window {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "{:15} - {:3} - {}{}{}{}",
-            self.session_name,
-            self.index,
-            self.name,
-            if self.actvie { " 🟢" } else { "" },
-            if self.last_flag { "  ⃝" } else { "" },
-            if self.marked { " ♥️" } else { "" },
-        )
-    }
+    Some(selected_item)
 }
