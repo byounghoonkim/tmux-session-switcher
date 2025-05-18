@@ -42,21 +42,27 @@ impl Switchable for Favorite {
         args.push("-n".to_string());
         args.push(self.name.to_string());
 
-        Command::new(TMUX)
+        args.push("-F".to_string());
+        let fields = "#{session_name}:#{window_index}";
+        args.push(fields.to_string());
+        args.push("-P".to_string());
+
+        let output = Command::new(TMUX)
             .args(args)
+            .output()
+            .expect("Failed to execute tmux switch")
+            .stdout;
+
+        let output = String::from_utf8_lossy(&output);
+        let output = output.trim();
+        if output.is_empty() {
+            return;
+        }
+
+        Command::new(TMUX)
+            .args(["switch", "-t", output])
             .status()
             .expect("Failed to execute tmux switch");
-
-        // TODO: get session and index from command and switch to it
-
-        // Command::new(TMUX)
-        //     .args([
-        //         "switch",
-        //         "-t",
-        //         &format!("{}:{}", self.session_name, self.index,),
-        //     ])
-        //     .status()
-        //     .expect("Failed to execute tmux switch");
     }
 }
 
