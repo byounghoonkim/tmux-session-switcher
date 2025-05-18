@@ -21,11 +21,15 @@ fn main() {
     let args = Args::parse();
 
     let mut ws: Vec<Box<dyn Item>> = Vec::new();
+
+    // TODO: load favorites from a file or config
     ws.push(Box::new(Favorite {
         name: "TestFavorites".to_string(),
-        session_name: None,
-        index: None,
-        path: None,
+        session_name: Some("WORK".to_string()),
+        //session_name: None,
+        index: Some("3".to_string()),
+        //index: None,
+        path: Some("~/oss".to_string()),
     }));
 
     let current_session = tmux::get_current_session();
