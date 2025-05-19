@@ -5,7 +5,7 @@ use std::process::Command;
 
 use super::tmux::SortPriority;
 
-pub(crate) fn sort_windows<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
+pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
     items.sort_by(|a, b| {
         if a.sort_priority() > b.sort_priority() {
             return Greater;

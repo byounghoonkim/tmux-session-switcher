@@ -60,7 +60,7 @@ fn main() {
         ws.push(Box::new(window.clone()));
     }
 
-    fzf::sort_windows(&mut ws);
+    fzf::sort_by_priority(&mut ws);
     if let Some(sw) = fzf::select_item::<dyn Item>(&ws, &args.size, &args.title) {
         sw.switch_window();
     }
