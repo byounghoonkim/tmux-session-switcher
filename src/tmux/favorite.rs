@@ -67,7 +67,7 @@ impl std::fmt::Display for Favorite {
 
 impl SortPriority for Favorite {
     fn sort_priority(&self) -> f32 {
-        0.5
+        5.0
     }
 }
 
