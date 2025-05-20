@@ -23,7 +23,9 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
     let fzf_tmux = format!(
         r#"
         fzf \
-            --tmux \
+            --tmux 50%,80% \
+            --layout=default \
+            --border=rounded \
             --border-label ' {} ' \
             --prompt '⚡' \
             --bind 'tab:down,btab:up'
