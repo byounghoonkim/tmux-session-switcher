@@ -18,18 +18,17 @@ pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
 
 pub(crate) fn select_item<'a, T: Display + ?Sized>(
     items: &'a [Box<T>],
-    size: &'a str,
     title: &str,
 ) -> Option<&'a T> {
     let fzf_tmux = format!(
         r#"
-        fzf-tmux \
-            -p {} \
+        fzf \
+            --tmux \
             --border-label ' {} ' \
             --prompt '⚡' \
             --bind 'tab:down,btab:up'
         "#,
-        size, title
+        title
     );
 
     let select_result = Command::new("sh")
@@ -40,7 +39,7 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
             fzf_tmux,
         ))
         .output()
-        .expect("Failed to execute fzf-tmux")
+        .expect("Failed to execute fzf")
         .stdout;
     let select_result = String::from_utf8_lossy(&select_result).trim().to_string();
     if select_result.is_empty() {

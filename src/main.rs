@@ -12,11 +12,6 @@ mod tmux;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Size of the fzf window
-    #[arg(short, long, default_value = "80,36")]
-    size: String,
-
-    /// Title of the fzf window
     #[arg(short, long, default_value = "Select Window")]
     title: String,
 
@@ -61,7 +56,7 @@ fn main() {
     }
 
     fzf::sort_by_priority(&mut ws);
-    if let Some(sw) = fzf::select_item::<dyn Item>(&ws, &args.size, &args.title) {
+    if let Some(sw) = fzf::select_item::<dyn Item>(&ws, &args.title) {
         sw.switch_window();
     }
 }
