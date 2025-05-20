@@ -47,10 +47,9 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
     if select_result.is_empty() {
         return None;
     }
-    let selected_item = items
-        .iter()
-        .find(|w| w.to_string().trim() == select_result)
-        .expect("Selected window not found");
-
-    Some(selected_item)
+    let selected_item = items.iter().find(|w| w.to_string().trim() == select_result);
+    match selected_item {
+        Some(item) => Some(item.as_ref()),
+        None => None,
+    }
 }

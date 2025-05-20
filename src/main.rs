@@ -1,20 +1,16 @@
-use std::path::PathBuf;
-
 use clap::Parser;
-use home::home_dir;
 
 use tmux::Item;
+use utils::expand_tilde;
 
 mod config;
 mod fzf;
 mod tmux;
+mod utils;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value = "Select Window")]
-    title: String,
-
     /// Path to the config file
     #[arg(
         short,
@@ -22,18 +18,9 @@ struct Args {
         default_value = "~/.config/tmux-session-switcher/config.toml"
     )]
     config: String,
-}
 
-fn expand_tilde(path: &str) -> PathBuf {
-    if path.starts_with("~") {
-        let home = home_dir().expect("Could not determine home directory");
-        return if path == "~" {
-            home
-        } else {
-            home.join(path.strip_prefix("~/").unwrap_or(path))
-        };
-    }
-    PathBuf::from(path)
+    #[arg(short, long, default_value = "Select Window")]
+    title: String,
 }
 
 fn main() {
