@@ -44,7 +44,7 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
                 session_name: captures[1].to_string(),
                 index: captures[2].to_string(),
                 name: captures[3].to_string(),
-                actvie: &captures[4] == "1" && &captures[1] == current_session,
+                active: &captures[4] == "1" && &captures[1] == current_session,
                 last_flag: &captures[5] == "1",
                 marked: &captures[6] == "1",
             });

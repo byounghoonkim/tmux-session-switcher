@@ -9,7 +9,7 @@ pub(crate) struct Window {
     pub(crate) session_name: String,
     pub(crate) index: String,
     pub(crate) name: String,
-    pub(crate) actvie: bool,
+    pub(crate) active: bool,
     pub(crate) last_flag: bool,
     pub(crate) marked: bool,
 }
@@ -35,7 +35,7 @@ impl std::fmt::Display for Window {
             self.session_name,
             self.index,
             self.name,
-            if self.actvie { " 🟢" } else { "" },
+            if self.active { " 🟢" } else { "" },
             if self.last_flag { "  ⃝" } else { "" },
             if self.marked { " ♥️" } else { "" },
         )
@@ -45,7 +45,7 @@ impl std::fmt::Display for Window {
 impl SortPriority for Window {
     fn sort_priority(&self) -> f32 {
         // Sort windows by active, marked, last and others
-        if self.actvie {
+        if self.active {
             return 0.0;
         }
         if self.last_flag {
