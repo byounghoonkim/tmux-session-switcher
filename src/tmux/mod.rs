@@ -62,3 +62,10 @@ pub(crate) fn get_current_session() -> String {
         .stdout;
     String::from_utf8_lossy(&current_session).trim().to_string()
 }
+
+pub(crate) fn create_new_window(current_session: &str, title: &str) {
+    Command::new(TMUX)
+        .args(["new-window", "-t", current_session, "-n", title])
+        .status()
+        .expect("Failed to create new window");
+}

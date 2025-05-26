@@ -1,6 +1,8 @@
 use clap::Parser;
 
-use tmux::Item;
+use config::Config;
+use fzf::{select_item, sort_by_priority};
+use tmux::{Item, create_new_window, get_current_session, get_running_windows};
 use utils::expand_tilde;
 
 mod config;
@@ -25,7 +27,7 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let config = config::Config::new(expand_tilde(&args.config).to_str().unwrap());
+    let config = Config::new(expand_tilde(&args.config).to_str().unwrap());
 
     let mut ws: Vec<Box<dyn Item>> = Vec::new();
 
@@ -36,14 +38,23 @@ fn main() {
         }
     }
 
-    let current_session = tmux::get_current_session();
-    let windows = tmux::get_running_windows(&current_session);
+    let current_session = get_current_session();
+    let windows = get_running_windows(&current_session);
     for window in &windows {
         ws.push(Box::new(window.clone()));
     }
 
-    fzf::sort_by_priority(&mut ws);
-    if let Some(sw) = fzf::select_item::<dyn Item>(&ws, &args.title) {
-        sw.switch_window();
+    sort_by_priority(&mut ws);
+
+    match select_item(&ws, &args.title) {
+        fzf::SelectItemReturn::None => {
+            //println!("No item selected.");
+        }
+        fzf::SelectItemReturn::Item(item) => {
+            item.switch_window();
+        }
+        fzf::SelectItemReturn::NewWindowTitle(title) => {
+            create_new_window(&current_session, &title);
+        }
     }
 }

@@ -16,10 +16,17 @@ pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
     });
 }
 
+pub enum SelectItemReturn<'a, T> {
+    None,
+    Item(&'a T),
+    NewWindowTitle(String),
+}
+
+// return T or String or None
 pub(crate) fn select_item<'a, T: Display + ?Sized>(
     items: &'a [Box<T>],
     title: &str,
-) -> Option<&'a T> {
+) -> SelectItemReturn<'a, Box<T>> {
     let fzf_tmux = format!(
         r#"
         fzf \
@@ -28,7 +35,8 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
             --border=rounded \
             --border-label ' {} ' \
             --prompt '⚡' \
-            --bind 'tab:down,btab:up'
+            --bind 'tab:down,btab:up' \
+            --print-query
         "#,
         title
     );
@@ -44,12 +52,13 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
         .expect("Failed to execute fzf")
         .stdout;
     let select_result = String::from_utf8_lossy(&select_result).trim().to_string();
+    println!("{}", select_result);
     if select_result.is_empty() {
-        return None;
+        return SelectItemReturn::None;
     }
     let selected_item = items.iter().find(|w| w.to_string().trim() == select_result);
     match selected_item {
-        Some(item) => Some(item.as_ref()),
-        None => None,
+        Some(item) => SelectItemReturn::Item(item),
+        None => SelectItemReturn::NewWindowTitle(select_result),
     }
 }
