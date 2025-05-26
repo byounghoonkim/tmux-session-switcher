@@ -52,12 +52,27 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
         .expect("Failed to execute fzf")
         .stdout;
     let select_result = String::from_utf8_lossy(&select_result).trim().to_string();
+    println!("fzf select result: {}", select_result);
     if select_result.is_empty() {
         return SelectItemReturn::None;
     }
-    let selected_item = items.iter().find(|w| w.to_string().trim() == select_result);
-    match selected_item {
-        Some(item) => SelectItemReturn::Item(item),
-        None => SelectItemReturn::NewWindowTitle(select_result),
+
+    match select_result.split_once('\n') {
+        Some((_, item)) => {
+            let selected_item = items.iter().find(|w| w.to_string().trim() == item.trim());
+            match selected_item {
+                Some(item) => SelectItemReturn::Item(item),
+                None => SelectItemReturn::None,
+            }
+        }
+        None => {
+            let selected_item = items
+                .iter()
+                .find(|w| w.to_string().trim() == select_result.trim());
+            match selected_item {
+                Some(item) => SelectItemReturn::Item(item),
+                None => SelectItemReturn::NewWindowTitle(select_result),
+            }
+        }
     }
 }
