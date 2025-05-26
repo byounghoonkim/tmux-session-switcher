@@ -52,7 +52,6 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
         .expect("Failed to execute fzf")
         .stdout;
     let select_result = String::from_utf8_lossy(&select_result).trim().to_string();
-    println!("{}", select_result);
     if select_result.is_empty() {
         return SelectItemReturn::None;
     }
