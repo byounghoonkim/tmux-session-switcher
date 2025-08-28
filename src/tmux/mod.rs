@@ -1,11 +1,15 @@
 use std::fmt::Display;
+use std::fs;
+use std::path::PathBuf;
 use std::process::Command;
 
 use regex::Regex;
+use serde_json;
 
 const TMUX: &str = "tmux";
 
 pub mod favorite;
+pub mod previous;
 pub mod window;
 
 pub(crate) trait Item: Display + SortPriority + Switchable {}
@@ -68,4 +72,42 @@ pub(crate) fn create_new_window(current_session: &str, title: &str) {
         .args(["new-window", "-t", current_session, "-n", title])
         .status()
         .expect("Failed to create new window");
+}
+
+fn get_previous_window_path() -> PathBuf {
+    let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    path.push(".config");
+    path.push("tmux-session-switcher");
+    
+    if !path.exists() {
+        fs::create_dir_all(&path).expect("Failed to create config directory");
+    }
+    
+    path.push("previous_window.json");
+    path
+}
+
+pub(crate) fn save_previous_window(session_name: &str, index: &str, name: &str) {
+    let previous_window = previous::PreviousWindow {
+        session_name: session_name.to_string(),
+        index: index.to_string(),
+        name: name.to_string(),
+    };
+    
+    let path = get_previous_window_path();
+    let json = serde_json::to_string_pretty(&previous_window)
+        .expect("Failed to serialize previous window");
+    
+    fs::write(path, json).expect("Failed to write previous window file");
+}
+
+pub(crate) fn load_previous_window() -> Option<previous::PreviousWindow> {
+    let path = get_previous_window_path();
+    
+    if !path.exists() {
+        return None;
+    }
+    
+    let contents = fs::read_to_string(path).ok()?;
+    serde_json::from_str(&contents).ok()
 }
