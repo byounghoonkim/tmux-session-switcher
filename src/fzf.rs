@@ -27,10 +27,11 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
     items: &'a [Box<T>],
     title: &str,
 ) -> SelectItemReturn<'a, Box<T>> {
+    let height = std::cmp::min(items.len() + 5, 40);
     let fzf_tmux = format!(
         r#"
         fzf \
-            --tmux 50%,80% \
+            --tmux 80,{} \
             --layout=default \
             --border=rounded \
             --border-label ' {} ' \
@@ -38,7 +39,7 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
             --bind 'tab:down,btab:up' \
             --print-query
         "#,
-        title
+        height, title
     );
 
     let select_result = Command::new("sh")
