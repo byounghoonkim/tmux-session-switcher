@@ -5,6 +5,14 @@ use std::process::Command;
 
 use super::tmux::SortPriority;
 
+fn get_terminal_width() -> u16 {
+    if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
+        std::cmp::min(width, 80)
+    } else {
+        80
+    }
+}
+
 pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
     items.sort_by(|a, b| {
         if a.sort_priority() > b.sort_priority() {
@@ -30,10 +38,11 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
     layout: &str,
 ) -> SelectItemReturn<'a, Box<T>> {
     let height = std::cmp::min(items.len() + 5, 40);
+    let width = get_terminal_width();
     let fzf_tmux = format!(
         r#"
         fzf \
-            --tmux 80,{} \
+            --tmux {},{} \
             --layout={} \
             --border={} \
             --border-label ' {} ' \
@@ -41,7 +50,7 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
             --bind 'tab:down,btab:up' \
             --print-query
         "#,
-        height, layout, border, title
+        width, height, layout, border, title
     );
 
     let select_result = Command::new("sh")
