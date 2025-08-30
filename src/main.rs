@@ -1,4 +1,5 @@
 use clap::{Parser, ValueEnum};
+use std::fmt;
 
 use config::Config;
 use fzf::{select_item, sort_by_priority};
@@ -30,9 +31,9 @@ enum BorderStyle {
     None,
 }
 
-impl ToString for BorderStyle {
-    fn to_string(&self) -> String {
-        match self {
+impl fmt::Display for BorderStyle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
             BorderStyle::Rounded => "rounded",
             BorderStyle::Sharp => "sharp",
             BorderStyle::Bold => "bold",
@@ -46,8 +47,8 @@ impl ToString for BorderStyle {
             BorderStyle::Left => "left",
             BorderStyle::Right => "right",
             BorderStyle::None => "none",
-        }
-        .to_string()
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -58,14 +59,14 @@ enum LayoutStyle {
     ReverseList,
 }
 
-impl ToString for LayoutStyle {
-    fn to_string(&self) -> String {
-        match self {
+impl fmt::Display for LayoutStyle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
             LayoutStyle::Default => "default",
             LayoutStyle::Reverse => "reverse",
             LayoutStyle::ReverseList => "reverse-list",
-        }
-        .to_string()
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -120,7 +121,12 @@ fn main() {
 
     sort_by_priority(&mut ws);
 
-    match select_item(&ws, &args.title, &args.border.to_string(), &args.layout.to_string()) {
+    match select_item(
+        &ws,
+        &args.title,
+        &args.border.to_string(),
+        &args.layout.to_string(),
+    ) {
         fzf::SelectItemReturn::None => {
             //println!("No item selected.");
         }
