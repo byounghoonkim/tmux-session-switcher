@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use regex::Regex;
-use serde_json;
 
 const TMUX: &str = "tmux";
 
