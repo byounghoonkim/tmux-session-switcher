@@ -27,20 +27,21 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
     items: &'a [Box<T>],
     title: &str,
     border: &str,
+    layout: &str,
 ) -> SelectItemReturn<'a, Box<T>> {
     let height = std::cmp::min(items.len() + 5, 40);
     let fzf_tmux = format!(
         r#"
         fzf \
             --tmux 80,{} \
-            --layout=default \
+            --layout={} \
             --border={} \
             --border-label ' {} ' \
             --prompt '⚡' \
             --bind 'tab:down,btab:up' \
             --print-query
         "#,
-        height, border, title
+        height, layout, border, title
     );
 
     let select_result = Command::new("sh")

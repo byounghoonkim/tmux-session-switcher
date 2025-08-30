@@ -51,6 +51,24 @@ impl ToString for BorderStyle {
     }
 }
 
+#[derive(Clone, Debug, ValueEnum)]
+enum LayoutStyle {
+    Default,
+    Reverse,
+    ReverseList,
+}
+
+impl ToString for LayoutStyle {
+    fn to_string(&self) -> String {
+        match self {
+            LayoutStyle::Default => "default",
+            LayoutStyle::Reverse => "reverse",
+            LayoutStyle::ReverseList => "reverse-list",
+        }
+        .to_string()
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -67,6 +85,9 @@ struct Args {
 
     #[arg(short, long, default_value_t = BorderStyle::Rounded)]
     border: BorderStyle,
+
+    #[arg(short, long, default_value_t = LayoutStyle::Default)]
+    layout: LayoutStyle,
 }
 
 fn main() {
@@ -99,7 +120,7 @@ fn main() {
 
     sort_by_priority(&mut ws);
 
-    match select_item(&ws, &args.title, &args.border.to_string()) {
+    match select_item(&ws, &args.title, &args.border.to_string(), &args.layout.to_string()) {
         fzf::SelectItemReturn::None => {
             //println!("No item selected.");
         }
