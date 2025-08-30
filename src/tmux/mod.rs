@@ -12,7 +12,11 @@ pub mod favorite;
 pub mod previous;
 pub mod window;
 
-pub(crate) trait Item: Display + SortPriority + Switchable {}
+pub(crate) trait Item: Display + SortPriority + Switchable {
+    fn session_name(&self) -> String;
+    fn index(&self) -> String;
+    fn name(&self) -> String;
+}
 
 pub(crate) trait SortPriority {
     fn sort_priority(&self) -> f32;

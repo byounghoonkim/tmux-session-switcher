@@ -71,4 +71,16 @@ impl SortPriority for Favorite {
     }
 }
 
-impl Item for Favorite {}
+impl Item for Favorite {
+    fn session_name(&self) -> String {
+        self.session_name.clone().unwrap_or_default()
+    }
+    
+    fn index(&self) -> String {
+        self.index.map(|i| i.to_string()).unwrap_or_default()
+    }
+    
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}

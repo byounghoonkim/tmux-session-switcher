@@ -39,4 +39,16 @@ impl SortPriority for PreviousWindow {
     }
 }
 
-impl Item for PreviousWindow {}
+impl Item for PreviousWindow {
+    fn session_name(&self) -> String {
+        self.session_name.clone()
+    }
+    
+    fn index(&self) -> String {
+        self.index.clone()
+    }
+    
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
