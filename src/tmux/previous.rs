@@ -1,5 +1,5 @@
-use std::process::Command;
 use serde::{Deserialize, Serialize};
+use std::process::Command;
 
 use crate::tmux::{Item, SortPriority, Switchable, TMUX};
 
@@ -43,11 +43,11 @@ impl Item for PreviousWindow {
     fn session_name(&self) -> String {
         self.session_name.clone()
     }
-    
+
     fn index(&self) -> String {
         self.index.clone()
     }
-    
+
     fn name(&self) -> String {
         self.name.clone()
     }

@@ -57,11 +57,11 @@ impl crate::tmux::Item for Window {
     fn session_name(&self) -> String {
         self.session_name.clone()
     }
-    
+
     fn index(&self) -> String {
         self.index.clone()
     }
-    
+
     fn name(&self) -> String {
         self.name.clone()
     }

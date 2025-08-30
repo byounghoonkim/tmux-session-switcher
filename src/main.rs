@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
 use config::Config;
 use fzf::{select_item, sort_by_priority};
@@ -13,6 +13,44 @@ mod fzf;
 mod tmux;
 mod utils;
 
+#[derive(Clone, Debug, ValueEnum)]
+enum BorderStyle {
+    Rounded,
+    Sharp,
+    Bold,
+    Block,
+    Thinblock,
+    Double,
+    Horizontal,
+    Vertical,
+    Top,
+    Bottom,
+    Left,
+    Right,
+    None,
+}
+
+impl ToString for BorderStyle {
+    fn to_string(&self) -> String {
+        match self {
+            BorderStyle::Rounded => "rounded",
+            BorderStyle::Sharp => "sharp",
+            BorderStyle::Bold => "bold",
+            BorderStyle::Block => "block",
+            BorderStyle::Thinblock => "thinblock",
+            BorderStyle::Double => "double",
+            BorderStyle::Horizontal => "horizontal",
+            BorderStyle::Vertical => "vertical",
+            BorderStyle::Top => "top",
+            BorderStyle::Bottom => "bottom",
+            BorderStyle::Left => "left",
+            BorderStyle::Right => "right",
+            BorderStyle::None => "none",
+        }
+        .to_string()
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -26,6 +64,9 @@ struct Args {
 
     #[arg(short, long, default_value = "Select Window")]
     title: String,
+
+    #[arg(short, long, default_value_t = BorderStyle::Rounded)]
+    border: BorderStyle,
 }
 
 fn main() {
@@ -58,16 +99,17 @@ fn main() {
 
     sort_by_priority(&mut ws);
 
-    match select_item(&ws, &args.title) {
+    match select_item(&ws, &args.title, &args.border.to_string()) {
         fzf::SelectItemReturn::None => {
             //println!("No item selected.");
         }
         fzf::SelectItemReturn::Item(item) => {
             // Save current active window as previous before switching, but only if it's different from selected
             if let Some(current_window) = current_active_window {
-                if current_window.session_name != item.session_name() 
-                    || current_window.index != item.index() 
-                    || current_window.name != item.name() {
+                if current_window.session_name != item.session_name()
+                    || current_window.index != item.index()
+                    || current_window.name != item.name()
+                {
                     save_previous_window(
                         &current_window.session_name,
                         &current_window.index,
