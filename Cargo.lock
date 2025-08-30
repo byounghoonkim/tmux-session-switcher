@@ -417,7 +417,7 @@ dependencies = [
 
 [[package]]
 name = "tmux-session-switcher"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "clap",
  "dirs",
