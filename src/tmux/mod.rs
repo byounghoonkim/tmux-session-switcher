@@ -28,7 +28,6 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
         "#{window_index}|",
         "#{window_name}|",
         "#{window_active}|",
-        "#{window_last_flag}|",
         "#{window_marked_flag}|"
     );
 
@@ -49,7 +48,6 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
                 index: captures[2].to_string(),
                 name: captures[3].to_string(),
                 active: &captures[4] == "1" && &captures[1] == current_session,
-                last_flag: &captures[5] == "1",
                 marked: &captures[6] == "1",
             });
         }
@@ -78,11 +76,11 @@ fn get_previous_window_path() -> PathBuf {
     let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     path.push(".config");
     path.push("tmux-session-switcher");
-    
+
     if !path.exists() {
         fs::create_dir_all(&path).expect("Failed to create config directory");
     }
-    
+
     path.push("previous_window.json");
     path
 }
@@ -93,21 +91,21 @@ pub(crate) fn save_previous_window(session_name: &str, index: &str, name: &str) 
         index: index.to_string(),
         name: name.to_string(),
     };
-    
+
     let path = get_previous_window_path();
     let json = serde_json::to_string_pretty(&previous_window)
         .expect("Failed to serialize previous window");
-    
+
     fs::write(path, json).expect("Failed to write previous window file");
 }
 
 pub(crate) fn load_previous_window() -> Option<previous::PreviousWindow> {
     let path = get_previous_window_path();
-    
+
     if !path.exists() {
         return None;
     }
-    
+
     let contents = fs::read_to_string(path).ok()?;
     serde_json::from_str(&contents).ok()
 }
