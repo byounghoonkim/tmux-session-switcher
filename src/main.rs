@@ -20,26 +20,26 @@ fn handle_list(config_path: &str) {
     match config.favorites {
         Some(favs) if !favs.is_empty() => {
             for fav in &favs {
-                println!("{}", fav);
+                print!("{}", fav);
             }
         }
         _ => println!("No favorites found."),
     }
 }
 
-fn add_favorite(config_path: &str, fav: tmux::favorite::Favorite) {
+fn add_favorite(config_path: &str, fav: tmux::favorite::Favorite) -> Result<(), String> {
     let mut config = Config::new(config_path);
     let favorites = config.favorites.get_or_insert_with(Vec::new);
 
     if favorites.iter().any(|f| f.name == fav.name) {
-        eprintln!("Favorite '{}' already exists.", fav.name);
-        std::process::exit(1);
+        return Err(format!("Favorite '{}' already exists.", fav.name));
     }
 
     let name = fav.name.clone();
     favorites.push(fav);
     config.save(config_path);
     println!("Added favorite '{}'.", name);
+    Ok(())
 }
 
 fn handle_add(
@@ -52,8 +52,14 @@ fn handle_add(
     let (cur_session, cur_index_str, cur_name, cur_path) = get_current_window();
     let cur_index: Option<u16> = cur_index_str.parse().ok();
 
+    let resolved_name = name.unwrap_or(cur_name);
+    if resolved_name.is_empty() {
+        eprintln!("Could not determine window name. Use --name to specify one.");
+        std::process::exit(1);
+    }
+
     let fav = tmux::favorite::Favorite {
-        name: name.unwrap_or(cur_name),
+        name: resolved_name,
         session_name: Some(session_name.unwrap_or(cur_session)),
         index: index.or(cur_index),
         path: {
@@ -62,7 +68,10 @@ fn handle_add(
         },
     };
 
-    add_favorite(config_path, fav);
+    if let Err(e) = add_favorite(config_path, fav) {
+        eprintln!("{}", e);
+        std::process::exit(1);
+    }
 }
 
 #[cfg(test)]
@@ -89,7 +98,7 @@ mod tests {
     #[test]
     fn test_add_favorite_success() {
         let path = temp_path("add_success");
-        add_favorite(&path, make_fav("foo"));
+        add_favorite(&path, make_fav("foo")).unwrap();
         let config = Config::new(&path);
         let favs = config.favorites.unwrap();
         assert_eq!(favs.len(), 1);
@@ -98,14 +107,12 @@ mod tests {
     }
 
     #[test]
-    fn test_add_favorite_duplicate_exits() {
+    fn test_add_favorite_duplicate_returns_err() {
         let path = temp_path("add_duplicate");
-        add_favorite(&path, make_fav("foo"));
-        // Second add with same name — test the duplicate check logic directly
-        let config = Config::new(&path);
-        let favs = config.favorites.unwrap();
-        let already_exists = favs.iter().any(|f| f.name == "foo");
-        assert!(already_exists);
+        add_favorite(&path, make_fav("foo")).unwrap();
+        let result = add_favorite(&path, make_fav("foo"));
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("already exists"));
         std::fs::remove_file(&path).ok();
     }
 }
