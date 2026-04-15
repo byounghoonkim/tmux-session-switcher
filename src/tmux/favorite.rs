@@ -1,13 +1,13 @@
 use std::process::Command;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::tmux::Item;
 use crate::tmux::SortPriority;
 use crate::tmux::Switchable;
 use crate::tmux::TMUX;
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub(crate) struct Favorite {
     pub(crate) name: String,
     pub(crate) session_name: Option<String>,
