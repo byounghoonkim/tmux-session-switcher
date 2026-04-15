@@ -1,11 +1,11 @@
 use clap::Parser;
 
-use args::Args;
+use args::{Args, Commands, FavoriteCommands};
 use config::Config;
 use fzf::{select_item, sort_by_priority};
 use tmux::{
-    Item, create_new_window, get_current_session, get_running_windows, load_previous_window,
-    save_previous_window,
+    Item, create_new_window, get_current_session, get_current_window, get_running_windows,
+    load_previous_window, save_previous_window,
 };
 use utils::expand_tilde;
 
@@ -15,28 +15,55 @@ mod fzf;
 mod tmux;
 mod utils;
 
+fn handle_list(config_path: &str) {
+    let config = Config::new(config_path);
+    match config.favorites {
+        Some(favs) if !favs.is_empty() => {
+            for fav in &favs {
+                print!("{}", fav);
+            }
+        }
+        _ => println!("No favorites found."),
+    }
+}
+
 fn main() {
     let args = Args::parse();
-    let config = Config::new(expand_tilde(&args.config).to_str().unwrap());
+    let config_path = expand_tilde(&args.config)
+        .to_str()
+        .unwrap()
+        .to_string();
 
+    if let Some(Commands::Favorite(fa)) = args.command {
+        match fa.command {
+            FavoriteCommands::List => {
+                handle_list(&config_path);
+                return;
+            }
+            FavoriteCommands::Add { .. } => {
+                todo!("add not yet implemented");
+            }
+            FavoriteCommands::Remove { .. } => {
+                todo!("remove not yet implemented");
+            }
+        }
+    }
+
+    let config = Config::new(&config_path);
     let mut ws: Vec<Box<dyn Item>> = Vec::new();
 
-    // Add favorites from config
     if let Some(favorites) = config.favorites {
         for favorite in favorites {
             ws.push(Box::new(favorite));
         }
     }
 
-    // Add previous window if available
     if let Some(previous) = load_previous_window() {
         ws.push(Box::new(previous));
     }
 
     let current_session = get_current_session();
     let windows = get_running_windows(&current_session);
-
-    // Find current active window to save before switching
     let current_active_window = windows.iter().find(|w| w.active);
 
     for window in &windows {
@@ -51,11 +78,8 @@ fn main() {
         &args.border.to_string(),
         &args.layout.to_string(),
     ) {
-        fzf::SelectItemReturn::None => {
-            //println!("No item selected.");
-        }
+        fzf::SelectItemReturn::None => {}
         fzf::SelectItemReturn::Item(item) => {
-            // Save current active window as previous before switching, but only if it's different from selected
             if let Some(current_window) = current_active_window {
                 if current_window.session_name != item.session_name()
                     || current_window.index != item.index()
@@ -71,7 +95,6 @@ fn main() {
             item.switch_window();
         }
         fzf::SelectItemReturn::NewWindowTitle(title) => {
-            // Save current active window as previous before creating new window
             if let Some(current_window) = current_active_window {
                 save_previous_window(
                     &current_window.session_name,
