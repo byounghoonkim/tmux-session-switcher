@@ -4,7 +4,7 @@ use args::{Args, Commands, FavoriteCommands};
 use config::Config;
 use fzf::{select_item, sort_by_priority};
 use tmux::{
-    Item, create_new_window, get_current_session, get_current_window, get_running_windows,
+    Item, create_new_window, get_current_session, get_running_windows,
     load_previous_window, save_previous_window,
 };
 use utils::expand_tilde;
@@ -20,7 +20,7 @@ fn handle_list(config_path: &str) {
     match config.favorites {
         Some(favs) if !favs.is_empty() => {
             for fav in &favs {
-                print!("{}", fav);
+                println!("{}", fav);
             }
         }
         _ => println!("No favorites found."),
