@@ -42,6 +42,68 @@ fn add_favorite(config_path: &str, fav: tmux::favorite::Favorite) -> Result<(), 
     Ok(())
 }
 
+/// Returns true if removed, false if not found
+fn try_remove_favorite_by_name(config_path: &str, name: &str) -> bool {
+    let mut config = Config::new(config_path);
+    let favorites = config.favorites.get_or_insert_with(Vec::new);
+    let len_before = favorites.len();
+    favorites.retain(|f| f.name != name);
+    if favorites.len() == len_before {
+        return false;
+    }
+    config.save(config_path);
+    true
+}
+
+fn remove_favorite_by_name(config_path: &str, name: &str) {
+    if !try_remove_favorite_by_name(config_path, name) {
+        eprintln!("Favorite '{}' not found.", name);
+        std::process::exit(1);
+    }
+    println!("Removed favorite '{}'.", name);
+}
+
+fn remove_favorite_interactive(config_path: &str) {
+    use std::process::Command;
+
+    let config = Config::new(config_path);
+    let favorites = match config.favorites {
+        Some(ref f) if !f.is_empty() => f.clone(),
+        _ => {
+            println!("No favorites found.");
+            return;
+        }
+    };
+
+    let input: String = favorites.iter().map(|f| f.to_string()).collect();
+
+    let result = Command::new("sh")
+        .arg("-c")
+        .arg(format!(
+            "printf '%s' '{}' | fzf --tmux 80,20 --border=rounded --border-label ' Remove Favorite ' --prompt '🗑 '",
+            input.replace('\'', "'\\''")
+        ))
+        .output()
+        .expect("Failed to execute fzf")
+        .stdout;
+
+    let selected = String::from_utf8_lossy(&result).trim().to_string();
+    if selected.is_empty() {
+        return;
+    }
+
+    if let Some(fav) = favorites.iter().find(|f| f.to_string().trim() == selected) {
+        remove_favorite_by_name(config_path, &fav.name.clone());
+    }
+}
+
+fn handle_remove(config_path: &str, name: Option<String>) {
+    match name {
+        Some(name) => remove_favorite_by_name(config_path, &name),
+        None => remove_favorite_interactive(config_path),
+    }
+}
+
 fn handle_add(
     config_path: &str,
     name: Option<String>,
@@ -115,6 +177,26 @@ mod tests {
         assert!(result.unwrap_err().contains("already exists"));
         std::fs::remove_file(&path).ok();
     }
+
+    #[test]
+    fn test_remove_favorite_by_name_success() {
+        let path = temp_path("remove_success");
+        add_favorite(&path, make_fav("bar")).unwrap();
+        remove_favorite_by_name(&path, "bar");
+        let config = Config::new(&path);
+        let favs = config.favorites.unwrap_or_default();
+        assert!(favs.iter().all(|f| f.name != "bar"));
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_remove_favorite_not_found() {
+        let path = temp_path("remove_not_found");
+        // empty config — removing nonexistent name returns false
+        let result = try_remove_favorite_by_name(&path, "nonexistent");
+        assert!(!result);
+        std::fs::remove_file(&path).ok();
+    }
 }
 
 fn main() {
@@ -134,8 +216,9 @@ fn main() {
                 handle_add(&config_path, name, session_name, index, path);
                 return;
             }
-            FavoriteCommands::Remove { .. } => {
-                todo!("remove not yet implemented");
+            FavoriteCommands::Remove { name } => {
+                handle_remove(&config_path, name);
+                return;
             }
         }
     }
