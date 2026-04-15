@@ -71,7 +71,7 @@ pub(crate) fn get_current_session() -> String {
 pub(crate) fn get_current_window() -> (String, String, String, String) {
     let fields = "#{session_name}|#{window_index}|#{window_name}|#{pane_current_path}";
     let output = Command::new(TMUX)
-        .args(["display-message", "-p", fields])
+        .args(["display-message", "-p", "-F", fields])
         .output()
         .expect("Failed to execute tmux command")
         .stdout;
