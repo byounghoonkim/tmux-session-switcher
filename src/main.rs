@@ -66,7 +66,8 @@ fn remove_favorite_by_name(config_path: &str, name: &str) {
 }
 
 fn remove_favorite_interactive(config_path: &str) {
-    use std::process::Command;
+    use std::io::Write;
+    use std::process::{Command, Stdio};
 
     let config = Config::new(config_path);
     let favorites = match config.favorites {
@@ -79,17 +80,24 @@ fn remove_favorite_interactive(config_path: &str) {
 
     let input: String = favorites.iter().map(|f| f.to_string()).collect();
 
-    let result = Command::new("sh")
-        .arg("-c")
-        .arg(format!(
-            "printf '%s' '{}' | fzf --tmux 80,20 --border=rounded --border-label ' Remove Favorite ' --prompt '🗑 '",
-            input.replace('\'', "'\\''")
-        ))
-        .output()
-        .expect("Failed to execute fzf")
-        .stdout;
+    let mut child = Command::new("fzf")
+        .args([
+            "--tmux", "80,20",
+            "--border=rounded",
+            "--border-label", " Remove Favorite ",
+            "--prompt", "🗑 ",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute fzf");
 
-    let selected = String::from_utf8_lossy(&result).trim().to_string();
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(input.as_bytes()).ok();
+    }
+
+    let output = child.wait_with_output().expect("Failed to wait on fzf");
+    let selected = String::from_utf8_lossy(&output.stdout).trim().to_string();
     if selected.is_empty() {
         return;
     }
