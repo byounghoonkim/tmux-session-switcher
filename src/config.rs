@@ -62,7 +62,9 @@ mod tests {
 
     #[test]
     fn test_config_new_missing_file_returns_empty() {
-        let config = Config::new("/tmp/tss_nonexistent_999.toml");
+        let path = temp_path("nonexistent_should_not_exist");
+        std::fs::remove_file(&path).ok(); // ensure clean state
+        let config = Config::new(&path);
         assert!(config.favorites.is_none());
     }
 }
