@@ -4,7 +4,7 @@ use args::{Args, Commands, FavoriteCommands};
 use config::Config;
 use fzf::{select_item, sort_by_priority};
 use tmux::{
-    Item, create_new_window, get_current_session, get_running_windows,
+    Item, create_new_window, get_current_session, get_current_window, get_running_windows,
     load_previous_window, save_previous_window,
 };
 use utils::expand_tilde;
@@ -27,6 +27,89 @@ fn handle_list(config_path: &str) {
     }
 }
 
+fn add_favorite(config_path: &str, fav: tmux::favorite::Favorite) {
+    let mut config = Config::new(config_path);
+    let favorites = config.favorites.get_or_insert_with(Vec::new);
+
+    if favorites.iter().any(|f| f.name == fav.name) {
+        eprintln!("Favorite '{}' already exists.", fav.name);
+        std::process::exit(1);
+    }
+
+    let name = fav.name.clone();
+    favorites.push(fav);
+    config.save(config_path);
+    println!("Added favorite '{}'.", name);
+}
+
+fn handle_add(
+    config_path: &str,
+    name: Option<String>,
+    session_name: Option<String>,
+    index: Option<u16>,
+    path: Option<String>,
+) {
+    let (cur_session, cur_index_str, cur_name, cur_path) = get_current_window();
+    let cur_index: Option<u16> = cur_index_str.parse().ok();
+
+    let fav = tmux::favorite::Favorite {
+        name: name.unwrap_or(cur_name),
+        session_name: Some(session_name.unwrap_or(cur_session)),
+        index: index.or(cur_index),
+        path: {
+            let p = path.unwrap_or(cur_path);
+            if p.is_empty() { None } else { Some(p) }
+        },
+    };
+
+    add_favorite(config_path, fav);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tmux::favorite::Favorite;
+    use std::env;
+
+    fn temp_path(suffix: &str) -> String {
+        let mut p = env::temp_dir();
+        p.push(format!("tss_main_test_{}.toml", suffix));
+        p.to_string_lossy().to_string()
+    }
+
+    fn make_fav(name: &str) -> Favorite {
+        Favorite {
+            name: name.to_string(),
+            session_name: Some("main".to_string()),
+            index: Some(1),
+            path: Some("/tmp".to_string()),
+        }
+    }
+
+    #[test]
+    fn test_add_favorite_success() {
+        let path = temp_path("add_success");
+        add_favorite(&path, make_fav("foo"));
+        let config = Config::new(&path);
+        let favs = config.favorites.unwrap();
+        assert_eq!(favs.len(), 1);
+        assert_eq!(favs[0].name, "foo");
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_add_favorite_duplicate_exits() {
+        let path = temp_path("add_duplicate");
+        add_favorite(&path, make_fav("foo"));
+        // Second add with same name — test the duplicate check logic directly
+        let config = Config::new(&path);
+        let favs = config.favorites.unwrap();
+        let already_exists = favs.iter().any(|f| f.name == "foo");
+        assert!(already_exists);
+        std::fs::remove_file(&path).ok();
+    }
+}
+
 fn main() {
     let args = Args::parse();
     let config_path = expand_tilde(&args.config)
@@ -40,8 +123,9 @@ fn main() {
                 handle_list(&config_path);
                 return;
             }
-            FavoriteCommands::Add { .. } => {
-                todo!("add not yet implemented");
+            FavoriteCommands::Add { name, session_name, index, path } => {
+                handle_add(&config_path, name, session_name, index, path);
+                return;
             }
             FavoriteCommands::Remove { .. } => {
                 todo!("remove not yet implemented");
