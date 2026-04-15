@@ -68,6 +68,23 @@ pub(crate) fn get_current_session() -> String {
     String::from_utf8_lossy(&current_session).trim().to_string()
 }
 
+pub(crate) fn get_current_window() -> (String, String, String, String) {
+    let fields = "#{session_name}|#{window_index}|#{window_name}|#{pane_current_path}";
+    let output = Command::new(TMUX)
+        .args(["display-message", "-p", fields])
+        .output()
+        .expect("Failed to execute tmux command")
+        .stdout;
+    let output = String::from_utf8_lossy(&output).trim().to_string();
+    let parts: Vec<&str> = output.splitn(4, '|').collect();
+    (
+        parts.first().unwrap_or(&"").to_string(),
+        parts.get(1).unwrap_or(&"").to_string(),
+        parts.get(2).unwrap_or(&"").to_string(),
+        parts.get(3).unwrap_or(&"").to_string(),
+    )
+}
+
 pub(crate) fn create_new_window(current_session: &str, title: &str) {
     Command::new(TMUX)
         .args(["new-window", "-t", current_session, "-n", title])
