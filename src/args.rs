@@ -123,7 +123,6 @@ pub enum FavoriteCommands {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use clap::Parser;
 
     #[test]
     fn test_favorite_add_no_args() {
@@ -186,5 +185,35 @@ mod tests {
     fn test_no_subcommand_still_works() {
         let args = Args::try_parse_from(["tss"]).unwrap();
         assert!(args.command.is_none());
+    }
+
+    #[test]
+    fn test_favorite_add_with_all_short_flags() {
+        let args = Args::try_parse_from([
+            "tss", "favorite", "add",
+            "-n", "mywin",
+            "-s", "main",
+            "-i", "2",
+            "-p", "/home/user",
+        ])
+        .unwrap();
+        match args.command {
+            Some(Commands::Favorite(fa)) => match fa.command {
+                FavoriteCommands::Add { name, session_name, index, path } => {
+                    assert_eq!(name, Some("mywin".to_string()));
+                    assert_eq!(session_name, Some("main".to_string()));
+                    assert_eq!(index, Some(2u16));
+                    assert_eq!(path, Some("/home/user".to_string()));
+                }
+                _ => panic!("Expected Add"),
+            },
+            _ => panic!("Expected Favorite"),
+        }
+    }
+
+    #[test]
+    fn test_favorite_add_invalid_index_fails() {
+        let result = Args::try_parse_from(["tss", "favorite", "add", "--index", "notanumber"]);
+        assert!(result.is_err());
     }
 }
