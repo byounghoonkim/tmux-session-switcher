@@ -45,7 +45,9 @@ fn add_favorite(config_path: &str, fav: tmux::favorite::Favorite) -> Result<(), 
 /// Returns true if removed, false if not found
 fn try_remove_favorite_by_name(config_path: &str, name: &str) -> bool {
     let mut config = Config::new(config_path);
-    let favorites = config.favorites.get_or_insert_with(Vec::new);
+    let Some(favorites) = config.favorites.as_mut() else {
+        return false;
+    };
     let len_before = favorites.len();
     favorites.retain(|f| f.name != name);
     if favorites.len() == len_before {
@@ -92,8 +94,12 @@ fn remove_favorite_interactive(config_path: &str) {
         return;
     }
 
-    if let Some(fav) = favorites.iter().find(|f| f.to_string().trim() == selected) {
-        remove_favorite_by_name(config_path, &fav.name.clone());
+    match favorites.iter().find(|f| f.to_string().trim() == selected) {
+        Some(fav) => remove_favorite_by_name(config_path, &fav.name),
+        None => {
+            eprintln!("Could not match selected favorite. Nothing removed.");
+            std::process::exit(1);
+        }
     }
 }
 
@@ -195,6 +201,19 @@ mod tests {
         // empty config — removing nonexistent name returns false
         let result = try_remove_favorite_by_name(&path, "nonexistent");
         assert!(!result);
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_remove_favorite_leaves_others_intact() {
+        let path = temp_path("remove_leaves_others");
+        add_favorite(&path, make_fav("keep")).unwrap();
+        add_favorite(&path, make_fav("remove_me")).unwrap();
+        remove_favorite_by_name(&path, "remove_me");
+        let config = Config::new(&path);
+        let favs = config.favorites.unwrap_or_default();
+        assert_eq!(favs.len(), 1);
+        assert_eq!(favs[0].name, "keep");
         std::fs::remove_file(&path).ok();
     }
 }
