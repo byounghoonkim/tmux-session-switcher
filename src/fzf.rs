@@ -15,6 +15,10 @@ fn get_terminal_width() -> u16 {
     }
 }
 
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
+
 pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
     items.sort_by(|a, b| {
         if a.sort_priority() > b.sort_priority() {
@@ -69,9 +73,9 @@ pub(crate) fn invoke_picker(
     let width = get_terminal_width();
     let popup_cmd = format!(
         "{} internal-picker {} {}",
-        exe.to_string_lossy(),
-        items_path,
-        result_path,
+        shell_quote(&exe.to_string_lossy()),
+        shell_quote(&items_path),
+        shell_quote(&result_path),
     );
 
     Command::new("tmux")
