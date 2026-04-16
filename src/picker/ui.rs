@@ -9,28 +9,34 @@ use ratatui::{
 use super::state::PickerState;
 use super::theme::Theme;
 
-/// 텍스트를 매칭 위치에 따라 일반/하이라이트 Span으로 분리
-fn highlight_spans<'a>(text: &str, positions: &[u32], normal: Style, highlight: Style) -> Line<'a> {
+/// 텍스트를 매칭 위치에 따라 일반/매칭 Span으로 분리.
+/// is_selected=true이면 모든 Span에 highlight_bg를 명시해 List::highlight_style 간섭을 방지.
+fn highlight_spans<'a>(
+    text: &str,
+    positions: &[u32],
+    normal: Style,
+    match_s: Style,
+) -> Line<'a> {
     if positions.is_empty() {
         return Line::from(Span::styled(text.to_string(), normal));
     }
     let matched: std::collections::HashSet<u32> = positions.iter().copied().collect();
     let mut spans = Vec::new();
-    let mut current_highlighted = false;
+    let mut current_is_match = false;
     let mut current_text = String::new();
 
     for (i, ch) in text.chars().enumerate() {
-        let is_matched = matched.contains(&(i as u32));
-        if is_matched != current_highlighted && !current_text.is_empty() {
-            let style = if current_highlighted { highlight } else { normal };
+        let is_match = matched.contains(&(i as u32));
+        if is_match != current_is_match && !current_text.is_empty() {
+            let style = if current_is_match { match_s } else { normal };
             spans.push(Span::styled(current_text.clone(), style));
             current_text.clear();
         }
-        current_highlighted = is_matched;
+        current_is_match = is_match;
         current_text.push(ch);
     }
     if !current_text.is_empty() {
-        let style = if current_highlighted { highlight } else { normal };
+        let style = if current_is_match { match_s } else { normal };
         spans.push(Span::styled(current_text, style));
     }
     Line::from(spans)
@@ -59,8 +65,9 @@ pub(crate) fn render(
     let sep = Paragraph::new(sep_char).style(Style::default().fg(theme.separator_fg));
 
     // 리스트 아이템 (매칭 글자 하이라이팅)
-    let normal_style = Style::default().fg(theme.item_fg);
-    let match_style = Style::default().fg(theme.match_fg).add_modifier(Modifier::BOLD);
+    // List::highlight_style은 Span 스타일을 덮어쓰므로 사용하지 않음.
+    // 선택된 행은 Span에 직접 highlight_bg/fg를 적용해 매칭 색상이 보이도록 함.
+    let selected_rank = list_state.selected().unwrap_or(0);
     let list_items: Vec<ListItem> = state
         .filtered
         .iter()
@@ -68,19 +75,26 @@ pub(crate) fn render(
         .map(|(rank, &i)| {
             let text = state.items[i].trim_end();
             let positions = state.match_indices.get(rank).map(|v| v.as_slice()).unwrap_or(&[]);
+            let (normal_style, match_style) = if rank == selected_rank {
+                (
+                    Style::default().fg(theme.highlight_fg).bg(theme.highlight_bg),
+                    Style::default()
+                        .fg(theme.match_fg)
+                        .bg(theme.highlight_bg)
+                        .add_modifier(Modifier::BOLD),
+                )
+            } else {
+                (
+                    Style::default().fg(theme.item_fg),
+                    Style::default().fg(theme.match_fg).add_modifier(Modifier::BOLD),
+                )
+            };
             let line = highlight_spans(text, positions, normal_style, match_style);
             ListItem::new(line)
         })
         .collect();
 
-    let list = List::new(list_items)
-        .highlight_style(
-            Style::default()
-                .bg(theme.highlight_bg)
-                .fg(theme.highlight_fg)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol("> ");
+    let list = List::new(list_items).highlight_symbol("> ");
 
     // 상태 표시줄
     let status_text = format!("  {}/{}", state.filtered.len(), state.items.len());
