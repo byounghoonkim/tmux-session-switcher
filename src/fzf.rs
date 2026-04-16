@@ -19,6 +19,18 @@ fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
 
+/// ratatui border 문자열을 tmux display-popup -b 옵션 값으로 변환
+fn to_tmux_border(border: &str) -> &'static str {
+    match border {
+        "rounded" => "rounded",
+        "double" => "double",
+        "bold" => "heavy",
+        "sharp" => "single",
+        "none" => "none",
+        _ => "single",
+    }
+}
+
 pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
     items.sort_by(|a, b| {
         if a.sort_priority() > b.sort_priority() {
@@ -86,6 +98,10 @@ pub(crate) fn invoke_picker(
             &width.to_string(),
             "-h",
             &height.to_string(),
+            "-b",
+            to_tmux_border(border),
+            "-T",
+            &format!(" {} ", title),
             &popup_cmd,
         ])
         .status()

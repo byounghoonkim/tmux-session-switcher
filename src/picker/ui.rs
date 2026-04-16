@@ -3,39 +3,23 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::Line,
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, List, ListItem, ListState, Paragraph},
 };
 
 use super::state::PickerState;
-
-fn border_type_from_str(border: &str) -> BorderType {
-    match border {
-        "sharp" => BorderType::Plain,
-        "bold" => BorderType::Thick,
-        "double" => BorderType::Double,
-        _ => BorderType::Rounded,
-    }
-}
 
 /// layout = "default": 프롬프트 상단, 리스트 하단
 /// layout = "reverse": 프롬프트 하단, 리스트 상단 (fzf --layout=reverse 동작)
 pub(crate) fn render(
     frame: &mut Frame,
     state: &PickerState,
-    title: &str,
-    border: &str,
+    _title: &str,
+    _border: &str,
     layout: &str,
     list_state: &mut ListState,
 ) {
     let area = frame.area();
-
-    let outer_block = Block::default()
-        .borders(Borders::ALL)
-        .border_type(border_type_from_str(border))
-        .title(format!(" {} ", title));
-
-    let inner = outer_block.inner(area);
-    frame.render_widget(outer_block, area);
+    let inner = Block::default().inner(area);
 
     // 프롬프트 영역: ">" + 쿼리
     let prompt_text = format!("> {}", state.query);
