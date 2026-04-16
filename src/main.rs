@@ -12,6 +12,7 @@ use utils::expand_tilde;
 mod args;
 mod config;
 mod fzf;
+mod picker;
 mod tmux;
 mod utils;
 
