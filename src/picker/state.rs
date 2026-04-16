@@ -101,16 +101,6 @@ impl PickerState {
         self.selected = (self.selected + page_size).min(max);
     }
 
-    pub(crate) fn update_filter(&mut self, filtered: Vec<usize>) {
-        self.match_indices = (0..filtered.len()).map(|_| vec![]).collect();
-        self.filtered = filtered;
-        let max = self.filtered.len().saturating_sub(1);
-        if self.selected > max {
-            self.selected = max;
-        }
-        // When filtered is empty, selected is 0 but selected_item_index returns None.
-    }
-
     pub(crate) fn update_filter_full(&mut self, results: Vec<(usize, Vec<u32>)>) {
         let max = results.len().saturating_sub(1);
         self.filtered = results.iter().map(|(i, _)| *i).collect();
@@ -140,6 +130,7 @@ mod tests {
         assert_eq!(s.cursor, 0);
         assert_eq!(s.selected, 0);
         assert_eq!(s.filtered, vec![0, 1, 2]);
+        assert_eq!(s.match_indices.len(), 3);
     }
 
     #[test]
@@ -244,14 +235,14 @@ mod tests {
     fn test_update_filter_clamps_selected() {
         let mut s = make(&["a", "b", "c"]);
         s.selected = 2;
-        s.update_filter(vec![0]);
+        s.update_filter_full(vec![(0, vec![])]);
         assert_eq!(s.selected, 0);
     }
 
     #[test]
     fn test_selected_item_index() {
         let mut s = make(&["a", "b", "c"]);
-        s.update_filter(vec![2, 0]);
+        s.update_filter_full(vec![(2, vec![]), (0, vec![])]);
         assert_eq!(s.selected_item_index(), Some(2));
         s.move_down();
         assert_eq!(s.selected_item_index(), Some(0));
@@ -260,7 +251,7 @@ mod tests {
     #[test]
     fn test_selected_item_index_empty_filter() {
         let mut s = make(&["a", "b"]);
-        s.update_filter(vec![]);
+        s.update_filter_full(vec![]);
         assert_eq!(s.selected_item_index(), None);
     }
 }
