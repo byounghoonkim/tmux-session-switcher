@@ -85,6 +85,12 @@ pub struct Args {
 pub enum Commands {
     /// Manage favorites
     Favorite(FavoriteArgs),
+    /// Internal: run TUI picker inside tmux display-popup (not for direct use)
+    #[command(hide = true)]
+    InternalPicker {
+        items_path: String,
+        result_path: String,
+    },
 }
 
 #[derive(Parser, Debug)]
@@ -215,5 +221,20 @@ mod tests {
     fn test_favorite_add_invalid_index_fails() {
         let result = Args::try_parse_from(["tss", "favorite", "add", "--index", "notanumber"]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_internal_picker_subcommand() {
+        let args = Args::try_parse_from([
+            "tss", "internal-picker", "/tmp/items.json", "/tmp/result.txt",
+        ])
+        .unwrap();
+        match args.command {
+            Some(Commands::InternalPicker { items_path, result_path }) => {
+                assert_eq!(items_path, "/tmp/items.json");
+                assert_eq!(result_path, "/tmp/result.txt");
+            }
+            _ => panic!("Expected InternalPicker"),
+        }
     }
 }
