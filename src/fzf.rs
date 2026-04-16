@@ -61,12 +61,14 @@ pub(crate) fn invoke_picker(
     title: &str,
     border: &str,
     layout: &str,
+    theme: &str,
 ) -> PickerOutput {
     let config = PickerConfig {
         items: item_strings.to_vec(),
         title: title.to_string(),
         border: border.to_string(),
         layout: layout.to_string(),
+        theme: theme.to_string(),
     };
 
     // 아이템을 temp file에 직렬화
@@ -193,11 +195,12 @@ pub(crate) fn dispatch_picker(
     border: &str,
     layout: &str,
     use_fzf: bool,
+    theme: &str,
 ) -> PickerOutput {
     if use_fzf {
         invoke_fzf(item_strings, title, border, layout)
     } else {
-        invoke_picker(item_strings, title, border, layout)
+        invoke_picker(item_strings, title, border, layout, theme)
     }
 }
 
@@ -207,10 +210,11 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
     border: &str,
     layout: &str,
     use_fzf: bool,
+    theme: &str,
 ) -> SelectItemReturn<'a, Box<T>> {
     let item_strings: Vec<String> = items.iter().map(|w| w.to_string()).collect();
 
-    match dispatch_picker(&item_strings, title, border, layout, use_fzf) {
+    match dispatch_picker(&item_strings, title, border, layout, use_fzf, theme) {
         PickerOutput::Cancelled => SelectItemReturn::None,
         PickerOutput::Selected(idx) => {
             if let Some(item) = items.get(idx) {

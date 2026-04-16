@@ -87,6 +87,10 @@ pub struct Args {
     #[arg(long, value_enum)]
     pub picker: Option<PickerBackend>,
 
+    /// Picker theme: catppuccin, nord, gruvbox, default
+    #[arg(long)]
+    pub theme: Option<String>,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
 }

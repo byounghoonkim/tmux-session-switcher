@@ -8,13 +8,14 @@ use crate::tmux::favorite::Favorite;
 pub struct Config {
     pub favorites: Option<Vec<Favorite>>,
     pub picker: Option<String>,
+    pub theme: Option<String>,
 }
 
 impl Config {
     pub fn new(config_file: &str) -> Self {
         let contents = fs::read_to_string(config_file).unwrap_or_default();
         if contents.is_empty() {
-            return Config { favorites: None, picker: None };
+            return Config { favorites: None, picker: None, theme: None };
         }
         toml::from_str(&contents).expect("Failed to parse config file")
     }
@@ -51,6 +52,7 @@ mod tests {
                 path: Some("/home/user/work".to_string()),
             }]),
             picker: None,
+            theme: None,
         };
         config.save(&path);
         let loaded = Config::new(&path);
@@ -76,6 +78,7 @@ mod tests {
         let config = Config {
             favorites: None,
             picker: Some("fzf".to_string()),
+            theme: None,
         };
         config.save(&path);
         let loaded = Config::new(&path);
