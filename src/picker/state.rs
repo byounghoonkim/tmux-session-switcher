@@ -3,17 +3,20 @@ pub(crate) struct PickerState {
     pub cursor: usize,
     pub selected: usize,
     pub filtered: Vec<usize>,
+    pub match_indices: Vec<Vec<u32>>,
     pub items: Vec<String>,
 }
 
 impl PickerState {
     pub(crate) fn new(items: Vec<String>) -> Self {
         let filtered = (0..items.len()).collect();
+        let match_indices = (0..items.len()).map(|_| vec![]).collect();
         Self {
             query: String::new(),
             cursor: 0,
             selected: 0,
             filtered,
+            match_indices,
             items,
         }
     }
@@ -99,12 +102,22 @@ impl PickerState {
     }
 
     pub(crate) fn update_filter(&mut self, filtered: Vec<usize>) {
+        self.match_indices = (0..filtered.len()).map(|_| vec![]).collect();
         self.filtered = filtered;
         let max = self.filtered.len().saturating_sub(1);
         if self.selected > max {
             self.selected = max;
         }
         // When filtered is empty, selected is 0 but selected_item_index returns None.
+    }
+
+    pub(crate) fn update_filter_full(&mut self, results: Vec<(usize, Vec<u32>)>) {
+        let max = results.len().saturating_sub(1);
+        self.filtered = results.iter().map(|(i, _)| *i).collect();
+        self.match_indices = results.into_iter().map(|(_, m)| m).collect();
+        if self.selected > max {
+            self.selected = max;
+        }
     }
 
     pub(crate) fn selected_item_index(&self) -> Option<usize> {

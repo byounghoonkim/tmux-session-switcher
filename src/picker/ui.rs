@@ -1,12 +1,40 @@
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::Line,
+    style::{Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
 
 use super::state::PickerState;
+use super::theme::Theme;
+
+/// 텍스트를 매칭 위치에 따라 일반/하이라이트 Span으로 분리
+fn highlight_spans<'a>(text: &str, positions: &[u32], normal: Style, highlight: Style) -> Line<'a> {
+    if positions.is_empty() {
+        return Line::from(Span::styled(text.to_string(), normal));
+    }
+    let matched: std::collections::HashSet<u32> = positions.iter().copied().collect();
+    let mut spans = Vec::new();
+    let mut current_highlighted = false;
+    let mut current_text = String::new();
+
+    for (i, ch) in text.chars().enumerate() {
+        let is_matched = matched.contains(&(i as u32));
+        if is_matched != current_highlighted && !current_text.is_empty() {
+            let style = if current_highlighted { highlight } else { normal };
+            spans.push(Span::styled(current_text.clone(), style));
+            current_text.clear();
+        }
+        current_highlighted = is_matched;
+        current_text.push(ch);
+    }
+    if !current_text.is_empty() {
+        let style = if current_highlighted { highlight } else { normal };
+        spans.push(Span::styled(current_text, style));
+    }
+    Line::from(spans)
+}
 
 /// layout = "default": 프롬프트 상단, 리스트 하단
 /// layout = "reverse": 프롬프트 하단, 리스트 상단 (fzf --layout=reverse 동작)
@@ -16,6 +44,7 @@ pub(crate) fn render(
     _title: &str,
     _border: &str,
     layout: &str,
+    theme: &Theme,
     list_state: &mut ListState,
 ) {
     let area = frame.area();
@@ -23,31 +52,39 @@ pub(crate) fn render(
 
     // 프롬프트 영역: ">" + 쿼리
     let prompt_text = format!("> {}", state.query);
-    let prompt = Paragraph::new(prompt_text);
+    let prompt = Paragraph::new(prompt_text).style(Style::default().fg(theme.prompt_fg));
 
     // 구분선
     let sep_char = "─".repeat(inner.width as usize);
-    let sep = Paragraph::new(sep_char).style(Style::default().fg(Color::DarkGray));
+    let sep = Paragraph::new(sep_char).style(Style::default().fg(theme.separator_fg));
 
-    // 리스트 아이템
+    // 리스트 아이템 (매칭 글자 하이라이팅)
+    let normal_style = Style::default().fg(theme.item_fg);
+    let match_style = Style::default().fg(theme.match_fg).add_modifier(Modifier::BOLD);
     let list_items: Vec<ListItem> = state
         .filtered
         .iter()
-        .map(|&i| ListItem::new(Line::from(state.items[i].trim_end().to_string())))
+        .enumerate()
+        .map(|(rank, &i)| {
+            let text = state.items[i].trim_end();
+            let positions = state.match_indices.get(rank).map(|v| v.as_slice()).unwrap_or(&[]);
+            let line = highlight_spans(text, positions, normal_style, match_style);
+            ListItem::new(line)
+        })
         .collect();
 
     let list = List::new(list_items)
         .highlight_style(
             Style::default()
-                .bg(Color::Blue)
-                .fg(Color::White)
+                .bg(theme.highlight_bg)
+                .fg(theme.highlight_fg)
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("> ");
 
     // 상태 표시줄
     let status_text = format!("  {}/{}", state.filtered.len(), state.items.len());
-    let status = Paragraph::new(status_text).style(Style::default().fg(Color::DarkGray));
+    let status = Paragraph::new(status_text).style(Style::default().fg(theme.status_fg));
 
     let prompt_chunk;
     if layout == "reverse" {

@@ -31,6 +31,37 @@ impl FuzzyFilter {
         scored.sort_by(|a, b| b.1.cmp(&a.1));
         scored.into_iter().map(|(i, _)| i).collect()
     }
+
+    /// filter와 동일하지만 각 아이템의 매칭된 글자 위치(char index)도 함께 반환.
+    /// 쿼리가 비어있으면 매칭 위치는 빈 Vec.
+    pub(crate) fn filter_with_indices(
+        &mut self,
+        query: &str,
+        items: &[String],
+    ) -> Vec<(usize, Vec<u32>)> {
+        if query.is_empty() {
+            return (0..items.len()).map(|i| (i, vec![])).collect();
+        }
+        let pattern = Pattern::parse(query, CaseMatching::Smart, Normalization::Smart);
+        let mut buf = Vec::new();
+        let mut idx_buf = Vec::new();
+        let mut scored: Vec<(usize, u32, Vec<u32>)> = items
+            .iter()
+            .enumerate()
+            .filter_map(|(i, item)| {
+                idx_buf.clear();
+                let score = pattern.indices(
+                    Utf32Str::new(item, &mut buf),
+                    &mut self.matcher,
+                    &mut idx_buf,
+                )?;
+                idx_buf.sort_unstable();
+                Some((i, score, idx_buf.clone()))
+            })
+            .collect();
+        scored.sort_by(|a, b| b.1.cmp(&a.1));
+        scored.into_iter().map(|(i, _, positions)| (i, positions)).collect()
+    }
 }
 
 #[cfg(test)]

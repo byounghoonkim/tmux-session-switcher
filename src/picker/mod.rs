@@ -1,6 +1,7 @@
 mod filter;
 mod input;
 mod state;
+pub(crate) mod theme;
 mod ui;
 
 use std::io;
@@ -16,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use filter::FuzzyFilter;
 use input::{Action, key_to_action};
 use state::PickerState;
+use theme::Theme;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct PickerConfig {
@@ -23,6 +25,7 @@ pub(crate) struct PickerConfig {
     pub title: String,
     pub border: String,
     pub layout: String,
+    pub theme: String,
 }
 
 pub(crate) enum PickerResult {
@@ -62,7 +65,8 @@ fn run_loop<B: ratatui::backend::Backend>(
     config: PickerConfig,
 ) -> PickerResult {
     // config.items를 이동시키기 전에 나머지 필드를 먼저 추출
-    let PickerConfig { items, title, border, layout } = config;
+    let PickerConfig { items, title, border, layout, theme: theme_name } = config;
+    let theme = Theme::from_name(&theme_name);
     let mut state = PickerState::new(items);
     let mut filter = FuzzyFilter::new();
     let mut list_state = ListState::default();
@@ -70,7 +74,7 @@ fn run_loop<B: ratatui::backend::Backend>(
 
     loop {
         terminal
-            .draw(|f| ui::render(f, &state, &title, &border, &layout, &mut list_state))
+            .draw(|f| ui::render(f, &state, &title, &border, &layout, &theme, &mut list_state))
             .expect("Failed to draw");
 
         if let Event::Key(key) = event::read().expect("Failed to read event") {
@@ -133,7 +137,7 @@ fn run_loop<B: ratatui::backend::Backend>(
 }
 
 fn refilter(filter: &mut FuzzyFilter, state: &mut PickerState, list_state: &mut ListState) {
-    let filtered = filter.filter(&state.query, &state.items);
-    state.update_filter(filtered);
+    let results = filter.filter_with_indices(&state.query, &state.items);
+    state.update_filter_full(results);
     list_state.select(Some(state.selected));
 }
