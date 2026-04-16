@@ -30,7 +30,7 @@ pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
     });
 }
 
-pub enum SelectItemReturn<'a, T> {
+pub(crate) enum SelectItemReturn<'a, T> {
     None,
     Item(&'a T),
     NewWindowTitle(String),
