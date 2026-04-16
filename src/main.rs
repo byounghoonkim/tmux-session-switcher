@@ -67,9 +67,6 @@ fn remove_favorite_by_name(config_path: &str, name: &str) {
 }
 
 fn remove_favorite_interactive(config_path: &str) {
-    use std::io::Write;
-    use std::process::{Command, Stdio};
-
     let config = Config::new(config_path);
     let favorites = match config.favorites {
         Some(ref f) if !f.is_empty() => f.clone(),
@@ -79,36 +76,15 @@ fn remove_favorite_interactive(config_path: &str) {
         }
     };
 
-    let input: String = favorites.iter().map(|f| f.to_string()).collect();
+    let item_strings: Vec<String> = favorites.iter().map(|f| f.to_string()).collect();
 
-    let mut child = Command::new("fzf")
-        .args([
-            "--tmux", "80,20",
-            "--border=rounded",
-            "--border-label", " Remove Favorite ",
-            "--prompt", "🗑 ",
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("Failed to execute fzf");
-
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(input.as_bytes()).ok();
-    }
-
-    let output = child.wait_with_output().expect("Failed to wait on fzf");
-    let selected = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if selected.is_empty() {
-        return;
-    }
-
-    match favorites.iter().find(|f| f.to_string().trim() == selected) {
-        Some(fav) => remove_favorite_by_name(config_path, &fav.name),
-        None => {
-            eprintln!("Could not match selected favorite. Nothing removed.");
-            std::process::exit(1);
+    match fzf::invoke_picker(&item_strings, "Remove Favorite", "rounded", "default") {
+        fzf::PickerOutput::Selected(idx) => {
+            if let Some(fav) = favorites.get(idx) {
+                remove_favorite_by_name(config_path, &fav.name);
+            }
         }
+        fzf::PickerOutput::Cancelled | fzf::PickerOutput::New(_) => {}
     }
 }
 
@@ -234,21 +210,39 @@ fn main() {
         .unwrap()
         .to_string();
 
-    if let Some(Commands::Favorite(fa)) = args.command {
-        match fa.command {
-            FavoriteCommands::List => {
-                handle_list(&config_path);
-                return;
-            }
-            FavoriteCommands::Add { name, session_name, index, path } => {
-                handle_add(&config_path, name, session_name, index, path);
-                return;
-            }
-            FavoriteCommands::Remove { name } => {
-                handle_remove(&config_path, name);
-                return;
+    if let Some(cmd) = args.command {
+        match cmd {
+            Commands::Favorite(fa) => match fa.command {
+                FavoriteCommands::List => handle_list(&config_path),
+                FavoriteCommands::Add { name, session_name, index, path } => {
+                    handle_add(&config_path, name, session_name, index, path);
+                }
+                FavoriteCommands::Remove { name } => handle_remove(&config_path, name),
+            },
+            Commands::InternalPicker { items_path, result_path } => {
+                let json = std::fs::read_to_string(&items_path)
+                    .expect("Failed to read items file");
+                let picker_config: picker::PickerConfig = serde_json::from_str(&json)
+                    .expect("Failed to parse picker config");
+
+                let result = picker::run(picker_config);
+
+                match result {
+                    picker::PickerResult::Selected(idx) => {
+                        std::fs::write(&result_path, idx.to_string())
+                            .expect("Failed to write result");
+                    }
+                    picker::PickerResult::New(title) => {
+                        std::fs::write(&result_path, format!("new:{}", title))
+                            .expect("Failed to write result");
+                    }
+                    picker::PickerResult::Cancelled => {
+                        // 결과 파일 미작성 → outer process가 Cancelled로 처리
+                    }
+                }
             }
         }
+        return;
     }
 
     let config = Config::new(&config_path);
