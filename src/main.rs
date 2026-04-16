@@ -66,7 +66,7 @@ fn remove_favorite_by_name(config_path: &str, name: &str) {
     println!("Removed favorite '{}'.", name);
 }
 
-fn remove_favorite_interactive(config_path: &str) {
+fn remove_favorite_interactive(config_path: &str, use_fzf: bool) {
     let config = Config::new(config_path);
     let favorites = match config.favorites {
         Some(ref f) if !f.is_empty() => f.clone(),
@@ -78,7 +78,7 @@ fn remove_favorite_interactive(config_path: &str) {
 
     let item_strings: Vec<String> = favorites.iter().map(|f| f.to_string()).collect();
 
-    match fzf::invoke_picker(&item_strings, "Remove Favorite", "rounded", "default") {
+    match fzf::dispatch_picker(&item_strings, "Remove Favorite", "rounded", "default", use_fzf) {
         fzf::PickerOutput::Selected(idx) => {
             if let Some(fav) = favorites.get(idx) {
                 remove_favorite_by_name(config_path, &fav.name);
@@ -88,10 +88,10 @@ fn remove_favorite_interactive(config_path: &str) {
     }
 }
 
-fn handle_remove(config_path: &str, name: Option<String>) {
+fn handle_remove(config_path: &str, name: Option<String>, use_fzf: bool) {
     match name {
         Some(name) => remove_favorite_by_name(config_path, &name),
-        None => remove_favorite_interactive(config_path),
+        None => remove_favorite_interactive(config_path, use_fzf),
     }
 }
 
@@ -210,6 +210,14 @@ fn main() {
         .unwrap()
         .to_string();
 
+    let config = Config::new(&config_path);
+
+    let effective_use_fzf = match &args.picker {
+        Some(args::PickerBackend::Fzf) => true,
+        Some(args::PickerBackend::Native) => false,
+        None => config.picker.as_deref() == Some("fzf"),
+    };
+
     if let Some(cmd) = args.command {
         match cmd {
             Commands::Favorite(fa) => match fa.command {
@@ -217,7 +225,7 @@ fn main() {
                 FavoriteCommands::Add { name, session_name, index, path } => {
                     handle_add(&config_path, name, session_name, index, path);
                 }
-                FavoriteCommands::Remove { name } => handle_remove(&config_path, name),
+                FavoriteCommands::Remove { name } => handle_remove(&config_path, name, effective_use_fzf),
             },
             Commands::InternalPicker { items_path, result_path } => {
                 let json = std::fs::read_to_string(&items_path)
@@ -245,7 +253,6 @@ fn main() {
         return;
     }
 
-    let config = Config::new(&config_path);
     let mut ws: Vec<Box<dyn Item>> = Vec::new();
 
     if let Some(favorites) = config.favorites {
@@ -273,6 +280,7 @@ fn main() {
         &args.title,
         &args.border.to_string(),
         &args.layout.to_string(),
+        effective_use_fzf,
     ) {
         fzf::SelectItemReturn::None => {}
         fzf::SelectItemReturn::Item(item) => {

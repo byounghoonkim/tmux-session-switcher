@@ -107,15 +107,94 @@ pub(crate) fn invoke_picker(
     PickerOutput::Cancelled
 }
 
+fn invoke_fzf(
+    item_strings: &[String],
+    title: &str,
+    border: &str,
+    layout: &str,
+) -> PickerOutput {
+    use std::process::Stdio;
+
+    let height = std::cmp::min(item_strings.len() + 5, 40);
+    let width = get_terminal_width();
+
+    let input: String = item_strings.iter().cloned().collect();
+
+    let mut child = Command::new("fzf")
+        .args([
+            "--tmux",
+            &format!("{},{}", width, height),
+            &format!("--layout={}", layout),
+            &format!("--border={}", border),
+            "--border-label",
+            &format!(" {} ", title),
+            "--prompt",
+            "⚡",
+            "--bind",
+            "tab:down,btab:up",
+            "--print-query",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to spawn fzf");
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(input.as_bytes()).ok();
+    }
+
+    let output = child.wait_with_output().expect("Failed to wait on fzf");
+    let result = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    if result.is_empty() {
+        return PickerOutput::Cancelled;
+    }
+
+    match result.split_once('\n') {
+        Some((_, selected)) => {
+            let selected = selected.trim();
+            if let Some(idx) = item_strings.iter().position(|s| s.trim() == selected) {
+                PickerOutput::Selected(idx)
+            } else {
+                PickerOutput::Cancelled
+            }
+        }
+        None => {
+            // Only query line — unmatched query, user wants new window
+            let query = result.trim();
+            if !query.is_empty() {
+                PickerOutput::New(query.to_string())
+            } else {
+                PickerOutput::Cancelled
+            }
+        }
+    }
+}
+
+pub(crate) fn dispatch_picker(
+    item_strings: &[String],
+    title: &str,
+    border: &str,
+    layout: &str,
+    use_fzf: bool,
+) -> PickerOutput {
+    if use_fzf {
+        invoke_fzf(item_strings, title, border, layout)
+    } else {
+        invoke_picker(item_strings, title, border, layout)
+    }
+}
+
 pub(crate) fn select_item<'a, T: Display + ?Sized>(
     items: &'a [Box<T>],
     title: &str,
     border: &str,
     layout: &str,
+    use_fzf: bool,
 ) -> SelectItemReturn<'a, Box<T>> {
     let item_strings: Vec<String> = items.iter().map(|w| w.to_string()).collect();
 
-    match invoke_picker(&item_strings, title, border, layout) {
+    match dispatch_picker(&item_strings, title, border, layout, use_fzf) {
         PickerOutput::Cancelled => SelectItemReturn::None,
         PickerOutput::Selected(idx) => {
             if let Some(item) = items.get(idx) {

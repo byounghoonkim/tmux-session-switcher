@@ -40,6 +40,12 @@ impl fmt::Display for BorderStyle {
 }
 
 #[derive(Clone, Debug, ValueEnum)]
+pub enum PickerBackend {
+    Native,
+    Fzf,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
 pub enum LayoutStyle {
     Default,
     Reverse,
@@ -76,6 +82,10 @@ pub struct Args {
 
     #[arg(short, long, default_value_t = LayoutStyle::Default)]
     pub layout: LayoutStyle,
+
+    /// Picker backend: native (ratatui) or fzf
+    #[arg(long, value_enum)]
+    pub picker: Option<PickerBackend>,
 
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -191,6 +201,24 @@ mod tests {
     fn test_no_subcommand_still_works() {
         let args = Args::try_parse_from(["tss"]).unwrap();
         assert!(args.command.is_none());
+    }
+
+    #[test]
+    fn test_picker_flag_native() {
+        let args = Args::try_parse_from(["tss", "--picker", "native"]).unwrap();
+        assert!(matches!(args.picker, Some(PickerBackend::Native)));
+    }
+
+    #[test]
+    fn test_picker_flag_fzf() {
+        let args = Args::try_parse_from(["tss", "--picker", "fzf"]).unwrap();
+        assert!(matches!(args.picker, Some(PickerBackend::Fzf)));
+    }
+
+    #[test]
+    fn test_picker_flag_absent() {
+        let args = Args::try_parse_from(["tss"]).unwrap();
+        assert!(args.picker.is_none());
     }
 
     #[test]
