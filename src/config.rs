@@ -9,13 +9,14 @@ pub struct Config {
     pub favorites: Option<Vec<Favorite>>,
     pub picker: Option<String>,
     pub theme: Option<String>,
+    pub bell_fg: Option<String>,
 }
 
 impl Config {
     pub fn new(config_file: &str) -> Self {
         let contents = fs::read_to_string(config_file).unwrap_or_default();
         if contents.is_empty() {
-            return Config { favorites: None, picker: None, theme: None };
+            return Config { favorites: None, picker: None, theme: None, bell_fg: None };
         }
         toml::from_str(&contents).expect("Failed to parse config file")
     }
@@ -53,6 +54,7 @@ mod tests {
             }]),
             picker: None,
             theme: None,
+            bell_fg: None,
         };
         config.save(&path);
         let loaded = Config::new(&path);
@@ -79,10 +81,26 @@ mod tests {
             favorites: None,
             picker: Some("fzf".to_string()),
             theme: None,
+            bell_fg: None,
         };
         config.save(&path);
         let loaded = Config::new(&path);
         assert_eq!(loaded.picker, Some("fzf".to_string()));
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_config_bell_fg_field() {
+        let path = temp_path("bell_fg_field");
+        let config = Config {
+            favorites: None,
+            picker: None,
+            theme: None,
+            bell_fg: Some("#ff8c00".to_string()),
+        };
+        config.save(&path);
+        let loaded = Config::new(&path);
+        assert_eq!(loaded.bell_fg, Some("#ff8c00".to_string()));
         std::fs::remove_file(&path).ok();
     }
 }

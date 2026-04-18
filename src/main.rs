@@ -78,7 +78,7 @@ fn remove_favorite_interactive(config_path: &str, use_fzf: bool, theme: &str) {
 
     let item_strings: Vec<String> = favorites.iter().map(|f| f.to_string()).collect();
 
-    match fzf::dispatch_picker(&item_strings, "Remove Favorite", "rounded", "default", use_fzf, theme) {
+    match fzf::dispatch_picker(&item_strings, "Remove Favorite", "rounded", "default", use_fzf, theme, None) {
         fzf::PickerOutput::Selected(idx) => {
             if let Some(fav) = favorites.get(idx) {
                 remove_favorite_by_name(config_path, &fav.name);
@@ -222,6 +222,7 @@ fn main() {
         .or(config.theme.as_deref())
         .unwrap_or("catppuccin")
         .to_string();
+    let bell_fg = config.bell_fg.clone();
 
     if let Some(cmd) = args.command {
         match cmd {
@@ -287,6 +288,7 @@ fn main() {
         &args.layout.to_string(),
         effective_use_fzf,
         &effective_theme,
+        bell_fg,
     ) {
         fzf::SelectItemReturn::None => {}
         fzf::SelectItemReturn::Item(item) => {

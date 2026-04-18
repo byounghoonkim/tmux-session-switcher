@@ -26,6 +26,7 @@ pub(crate) struct PickerConfig {
     pub border: String,
     pub layout: String,
     pub theme: String,
+    pub bell_fg: Option<String>,
 }
 
 pub(crate) enum PickerResult {
@@ -65,8 +66,13 @@ fn run_loop<B: ratatui::backend::Backend>(
     config: PickerConfig,
 ) -> PickerResult {
     // config.items를 이동시키기 전에 나머지 필드를 먼저 추출
-    let PickerConfig { items, title, border, layout, theme: theme_name } = config;
-    let theme = Theme::from_name(&theme_name);
+    let PickerConfig { items, title, border, layout, theme: theme_name, bell_fg } = config;
+    let mut theme = Theme::from_name(&theme_name);
+    if let Some(ref hex) = bell_fg {
+        if let Some(color) = theme::parse_hex_color(hex) {
+            theme.bell_fg = color;
+        }
+    }
     let mut state = PickerState::new(items);
     let mut filter = FuzzyFilter::new();
     let mut list_state = ListState::default();
