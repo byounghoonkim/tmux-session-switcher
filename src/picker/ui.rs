@@ -75,17 +75,20 @@ pub(crate) fn render(
         .map(|(rank, &i)| {
             let text = state.items[i].trim_end();
             let positions = state.match_indices.get(rank).map(|v| v.as_slice()).unwrap_or(&[]);
+            let is_bell = text.contains('🔔');
             let (normal_style, match_style) = if rank == selected_rank {
+                let fg = if is_bell { theme.bell_fg } else { theme.highlight_fg };
                 (
-                    Style::default().fg(theme.highlight_fg).bg(theme.highlight_bg),
+                    Style::default().fg(fg).bg(theme.highlight_bg),
                     Style::default()
                         .fg(theme.match_fg)
                         .bg(theme.highlight_bg)
                         .add_modifier(Modifier::BOLD),
                 )
             } else {
+                let fg = if is_bell { theme.bell_fg } else { theme.item_fg };
                 (
-                    Style::default().fg(theme.item_fg),
+                    Style::default().fg(fg),
                     Style::default().fg(theme.match_fg).add_modifier(Modifier::BOLD),
                 )
             };
