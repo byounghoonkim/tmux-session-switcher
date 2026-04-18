@@ -31,7 +31,8 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
         "#{window_index}|",
         "#{window_name}|",
         "#{window_active}|",
-        "#{window_marked_flag}|"
+        "#{window_marked_flag}|",
+        "#{window_bell_flag}|"
     );
 
     let all_windows = Command::new(TMUX)
@@ -43,7 +44,7 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
     let all_windows = String::from_utf8_lossy(&all_windows);
 
     let mut windows = Vec::new();
-    let re = Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap();
+    let re = Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap();
     for line in all_windows.lines() {
         if let Some(captures) = re.captures(line) {
             windows.push(window::Window {
@@ -52,6 +53,7 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
                 name: captures[3].to_string(),
                 active: &captures[4] == "1" && &captures[1] == current_session,
                 marked: &captures[5] == "1",
+                bell: &captures[6] == "1",
             });
         }
     }
