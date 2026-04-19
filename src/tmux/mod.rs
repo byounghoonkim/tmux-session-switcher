@@ -28,7 +28,15 @@ pub(crate) trait Switchable {
 
 static WINDOW_RE: OnceLock<Regex> = OnceLock::new();
 
-pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> {
+fn run_command(args: &[&str]) -> Result<String, String> {
+    let output = Command::new(TMUX)
+        .args(args)
+        .output()
+        .map_err(|e| format!("Failed to run tmux {}: {}", args.first().unwrap_or(&""), e))?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+pub(crate) fn get_running_windows(current_session: &str) -> Result<Vec<window::Window>, String> {
     let fields = concat!(
         "#{session_name}|",
         "#{window_index}|",
@@ -38,19 +46,14 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
         "#{window_bell_flag}|"
     );
 
-    let all_windows = Command::new(TMUX)
-        .args(["list-windows", "-a", "-F", fields])
-        .output()
-        .expect("Failed to execute tmux command")
-        .stdout;
+    let raw = run_command(&["list-windows", "-a", "-F", fields])?;
 
-    let all_windows = String::from_utf8_lossy(&all_windows);
-
-    let mut windows = Vec::new();
     let re = WINDOW_RE.get_or_init(|| {
         Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap()
     });
-    for line in all_windows.lines() {
+
+    let mut windows = Vec::new();
+    for line in raw.lines() {
         if let Some(captures) = re.captures(line) {
             windows.push(window::Window {
                 session_name: captures[1].to_string(),
@@ -63,7 +66,7 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
         }
     }
 
-    windows
+    Ok(windows)
 }
 
 pub(crate) fn get_current_session() -> String {
@@ -128,4 +131,15 @@ pub(crate) fn load_previous_window() -> Option<previous::PreviousWindow> {
 
     let contents = fs::read_to_string(path).ok()?;
     serde_json::from_str(&contents).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_running_windows_returns_result() {
+        // Compile-time check: the return type must be Result<Vec<window::Window>, String>.
+        let _: fn(&str) -> Result<Vec<window::Window>, String> = get_running_windows;
+    }
 }

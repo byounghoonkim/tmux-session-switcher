@@ -272,7 +272,13 @@ fn main() {
     }
 
     let current_session = get_current_session();
-    let windows = get_running_windows(&current_session);
+    let windows = match get_running_windows(&current_session) {
+        Ok(ws) => ws,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
+    };
     let current_active_window = windows.iter().find(|w| w.active);
 
     for window in &windows {
