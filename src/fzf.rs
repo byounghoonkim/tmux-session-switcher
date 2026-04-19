@@ -5,7 +5,16 @@ use std::io::Write;
 use std::process::Command;
 
 use super::tmux::SortPriority;
-use crate::picker::PickerConfig;
+use crate::picker::PickerConfig as InternalPickerConfig;
+
+pub(crate) struct PickerConfig {
+    pub title: String,
+    pub border: String,
+    pub layout: String,
+    pub use_fzf: bool,
+    pub theme: String,
+    pub bell_fg: Option<String>,
+}
 
 fn get_terminal_width() -> u16 {
     if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
@@ -64,7 +73,7 @@ pub(crate) fn invoke_picker(
     theme: &str,
     bell_fg: Option<String>,
 ) -> PickerOutput {
-    let config = PickerConfig {
+    let config = InternalPickerConfig {
         items: item_strings.to_vec(),
         title: title.to_string(),
         border: border.to_string(),
@@ -193,32 +202,29 @@ fn invoke_fzf(
 
 pub(crate) fn dispatch_picker(
     item_strings: &[String],
-    title: &str,
-    border: &str,
-    layout: &str,
-    use_fzf: bool,
-    theme: &str,
-    bell_fg: Option<String>,
+    config: &PickerConfig,
 ) -> PickerOutput {
-    if use_fzf {
-        invoke_fzf(item_strings, title, border, layout)
+    if config.use_fzf {
+        invoke_fzf(item_strings, &config.title, &config.border, &config.layout)
     } else {
-        invoke_picker(item_strings, title, border, layout, theme, bell_fg)
+        invoke_picker(
+            item_strings,
+            &config.title,
+            &config.border,
+            &config.layout,
+            &config.theme,
+            config.bell_fg.clone(),
+        )
     }
 }
 
 pub(crate) fn select_item<'a, T: Display + ?Sized>(
     items: &'a [Box<T>],
-    title: &str,
-    border: &str,
-    layout: &str,
-    use_fzf: bool,
-    theme: &str,
-    bell_fg: Option<String>,
+    config: &PickerConfig,
 ) -> SelectItemReturn<'a, Box<T>> {
     let item_strings: Vec<String> = items.iter().map(|w| w.to_string()).collect();
 
-    match dispatch_picker(&item_strings, title, border, layout, use_fzf, theme, bell_fg) {
+    match dispatch_picker(&item_strings, config) {
         PickerOutput::Cancelled => SelectItemReturn::None,
         PickerOutput::Selected(idx) => {
             if let Some(item) = items.get(idx) {
@@ -228,5 +234,41 @@ pub(crate) fn select_item<'a, T: Display + ?Sized>(
             }
         }
         PickerOutput::New(title) => SelectItemReturn::NewWindowTitle(title),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_picker_config_fields_accessible() {
+        let cfg = PickerConfig {
+            title: "Test".to_string(),
+            border: "rounded".to_string(),
+            layout: "default".to_string(),
+            use_fzf: false,
+            theme: "nord".to_string(),
+            bell_fg: Some("#ff0000".to_string()),
+        };
+        assert_eq!(cfg.title, "Test");
+        assert_eq!(cfg.border, "rounded");
+        assert_eq!(cfg.layout, "default");
+        assert!(!cfg.use_fzf);
+        assert_eq!(cfg.theme, "nord");
+        assert_eq!(cfg.bell_fg, Some("#ff0000".to_string()));
+    }
+
+    #[test]
+    fn test_picker_config_no_bell_fg() {
+        let cfg = PickerConfig {
+            title: "x".to_string(),
+            border: "sharp".to_string(),
+            layout: "reverse".to_string(),
+            use_fzf: true,
+            theme: "gruvbox".to_string(),
+            bell_fg: None,
+        };
+        assert!(cfg.bell_fg.is_none());
     }
 }

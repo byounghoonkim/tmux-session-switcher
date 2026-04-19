@@ -78,7 +78,16 @@ fn remove_favorite_interactive(config_path: &str, use_fzf: bool, theme: &str) {
 
     let item_strings: Vec<String> = favorites.iter().map(|f| f.to_string()).collect();
 
-    match fzf::dispatch_picker(&item_strings, "Remove Favorite", "rounded", "default", use_fzf, theme, None) {
+    let picker_cfg = fzf::PickerConfig {
+        title: "Remove Favorite".to_string(),
+        border: "rounded".to_string(),
+        layout: "default".to_string(),
+        use_fzf,
+        theme: theme.to_string(),
+        bell_fg: None,
+    };
+
+    match fzf::dispatch_picker(&item_strings, &picker_cfg) {
         fzf::PickerOutput::Selected(idx) => {
             if let Some(fav) = favorites.get(idx) {
                 remove_favorite_by_name(config_path, &fav.name);
@@ -287,15 +296,16 @@ fn main() {
 
     sort_by_priority(&mut ws);
 
-    match select_item(
-        &ws,
-        &args.title,
-        &args.border.to_string(),
-        &args.layout.to_string(),
-        effective_use_fzf,
-        &effective_theme,
+    let picker_cfg = fzf::PickerConfig {
+        title: args.title.clone(),
+        border: args.border.to_string(),
+        layout: args.layout.to_string(),
+        use_fzf: effective_use_fzf,
+        theme: effective_theme.clone(),
         bell_fg,
-    ) {
+    };
+
+    match select_item(&ws, &picker_cfg) {
         fzf::SelectItemReturn::None => {}
         fzf::SelectItemReturn::Item(item) => {
             if let Some(current_window) = current_active_window {
