@@ -41,9 +41,9 @@ Run with no arguments to open the window picker.
 |------|---------|-------------|
 | `--picker <native\|fzf>` | `native` | Picker backend |
 | `--theme <name>` | `catppuccin` | Color theme |
-| `--title <text>` | `Switch` | Popup title |
-| `--border <style>` | `rounded` | Border style (`rounded`, `double`, `bold`, `sharp`, `none`) |
-| `--layout <style>` | `default` | Layout (`default` = prompt top; `reverse` = prompt bottom) |
+| `--title <text>` | `Select Window` | Popup title |
+| `--border <style>` | `rounded` | Border style (`rounded`, `double`, `bold`, etc. — see `--help`) |
+| `--layout <style>` | `default` | Layout (`default`, `reverse`, `reverse-list`) |
 | `--config <path>` | `~/.config/tmux-session-switcher/config.toml` | Config file path |
 
 ## Config file
@@ -103,7 +103,7 @@ tmux-session-switcher favorite list
 tmux-session-switcher favorite add --name mywork
 
 # Add specific window
-tmux-session-switcher favorite add --name mywork --session main --index 2 --path /home/user/work
+tmux-session-switcher favorite add --name mywork --session-name main --index 2 --path /home/user/work
 
 # Remove by name
 tmux-session-switcher favorite remove --name mywork
