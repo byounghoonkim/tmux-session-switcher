@@ -1,10 +1,8 @@
 use std::path::PathBuf;
 
-use home::home_dir;
-
 pub fn expand_tilde(path: &str) -> PathBuf {
     if path.starts_with("~") {
-        let home = home_dir().expect("Could not determine home directory");
+        let home = dirs::home_dir().expect("Could not determine home directory");
         return if path == "~" {
             home
         } else {

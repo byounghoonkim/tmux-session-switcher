@@ -33,6 +33,13 @@ fn run_command(args: &[&str]) -> Result<String, String> {
         .args(args)
         .output()
         .map_err(|e| format!("Failed to run tmux {}: {}", args.first().unwrap_or(&""), e))?;
+    if !output.status.success() {
+        return Err(format!(
+            "tmux {} exited with status {}",
+            args.first().unwrap_or(&""),
+            output.status
+        ));
+    }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
