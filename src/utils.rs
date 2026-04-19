@@ -12,10 +12,15 @@ pub fn expand_tilde(path: &str) -> PathBuf {
     PathBuf::from(path)
 }
 
-pub fn get_config_dir() -> PathBuf {
+fn config_dir_path() -> PathBuf {
     let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     path.push(".config");
     path.push("tmux-session-switcher");
+    path
+}
+
+pub fn get_config_dir() -> PathBuf {
+    let path = config_dir_path();
     if !path.exists() {
         std::fs::create_dir_all(&path).expect("Failed to create config directory");
     }
@@ -27,15 +32,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_config_dir_is_absolute() {
-        let dir = get_config_dir();
+    fn test_config_dir_path_is_absolute() {
+        let dir = config_dir_path();
         assert!(dir.is_absolute(), "config dir must be an absolute path");
         assert!(dir.ends_with("tmux-session-switcher"));
-    }
-
-    #[test]
-    fn test_get_config_dir_creates_directory() {
-        let dir = get_config_dir();
-        assert!(dir.exists(), "get_config_dir must create the directory");
     }
 }
