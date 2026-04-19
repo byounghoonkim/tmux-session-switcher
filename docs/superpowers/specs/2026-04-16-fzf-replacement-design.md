@@ -1,7 +1,8 @@
 # fzf 교체 (Native Rust TUI Picker) 설계 문서
 
 **날짜:** 2026-04-16  
-**작성자:** Brainstorming 세션
+**작성자:** Brainstorming 세션  
+**Status:** Implemented
 
 ---
 

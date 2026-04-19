@@ -101,8 +101,7 @@ pub(crate) fn render(
     let status_text = format!("  {}/{}", state.filtered.len(), state.items.len());
     let status = Paragraph::new(status_text).style(Style::default().fg(theme.status_fg));
 
-    let prompt_chunk;
-    if layout == "reverse" {
+    let prompt_chunk = if layout == "reverse" {
         // reverse: list at top, prompt at bottom
         let chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -118,7 +117,7 @@ pub(crate) fn render(
         frame.render_stateful_widget(list, chunks[1], list_state);
         frame.render_widget(sep, chunks[2]);
         frame.render_widget(prompt, chunks[3]);
-        prompt_chunk = chunks[3];
+        chunks[3]
     } else {
         // default: prompt at top, list at bottom
         let chunks = Layout::default()
@@ -135,8 +134,8 @@ pub(crate) fn render(
         frame.render_widget(sep, chunks[1]);
         frame.render_stateful_widget(list, chunks[2], list_state);
         frame.render_widget(status, chunks[3]);
-        prompt_chunk = chunks[0];
-    }
+        chunks[0]
+    };
 
     // Render cursor at current query position
     let visual_col = state.query[..state.cursor].chars().count() as u16;
