@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::OnceLock;
 
 use regex::Regex;
 
@@ -25,6 +26,8 @@ pub(crate) trait Switchable {
     fn switch_window(&self);
 }
 
+static WINDOW_RE: OnceLock<Regex> = OnceLock::new();
+
 pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> {
     let fields = concat!(
         "#{session_name}|",
@@ -44,7 +47,9 @@ pub(crate) fn get_running_windows(current_session: &str) -> Vec<window::Window> 
     let all_windows = String::from_utf8_lossy(&all_windows);
 
     let mut windows = Vec::new();
-    let re = Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap();
+    let re = WINDOW_RE.get_or_init(|| {
+        Regex::new(r"([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)").unwrap()
+    });
     for line in all_windows.lines() {
         if let Some(captures) = re.captures(line) {
             windows.push(window::Window {
