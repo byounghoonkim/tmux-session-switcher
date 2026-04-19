@@ -125,3 +125,92 @@ mod display_format {
         assert_eq!(result, "verylongsessionname -  10 - term");
     }
 }
+
+#[cfg(test)]
+mod cli {
+    use std::env;
+    use std::process::Command;
+
+    fn binary() -> std::path::PathBuf {
+        std::path::PathBuf::from(env!("CARGO_BIN_EXE_tmux-session-switcher"))
+    }
+
+    fn temp_config(suffix: &str) -> String {
+        let mut p = env::temp_dir();
+        p.push(format!("tss_cli_{}.toml", suffix));
+        p.to_string_lossy().to_string()
+    }
+
+    #[test]
+    fn test_favorite_list_empty_config() {
+        let path = temp_config("list_empty");
+        std::fs::write(&path, "").unwrap();
+
+        let output = Command::new(binary())
+            .args(["--config", &path, "favorite", "list"])
+            .output()
+            .expect("failed to run binary");
+
+        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("No favorites found."));
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_favorite_list_shows_saved_favorite() {
+        let path = temp_config("list_with_fav");
+        let toml = r#"
+[[favorites]]
+name = "work"
+session_name = "main"
+index = 2
+path = "/home/user/work"
+"#;
+        std::fs::write(&path, toml).unwrap();
+
+        let output = Command::new(binary())
+            .args(["--config", &path, "favorite", "list"])
+            .output()
+            .expect("failed to run binary");
+
+        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("work"), "expected favorite 'work' in output, got: {}", stdout);
+        assert!(stdout.contains("main"), "expected session 'main' in output, got: {}", stdout);
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn test_favorite_remove_by_name() {
+        let path = temp_config("remove_by_name");
+        let toml = r#"
+[[favorites]]
+name = "work"
+session_name = "main"
+index = 2
+path = "/home/user/work"
+
+[[favorites]]
+name = "keep"
+session_name = "other"
+index = 1
+path = "/tmp"
+"#;
+        std::fs::write(&path, toml).unwrap();
+
+        let output = Command::new(binary())
+            .args(["--config", &path, "favorite", "remove", "--name", "work"])
+            .output()
+            .expect("failed to run binary");
+
+        assert!(output.status.success());
+
+        // Verify "work" was removed from the config file
+        let remaining = std::fs::read_to_string(&path).unwrap();
+        assert!(!remaining.contains("\"work\"") && !remaining.contains("'work'"),
+            "removed favorite should not appear in config: {}", remaining);
+        assert!(remaining.contains("keep"), "other favorite should remain: {}", remaining);
+        std::fs::remove_file(&path).ok();
+    }
+}
