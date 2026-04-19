@@ -95,14 +95,7 @@ pub(crate) fn create_new_window(current_session: &str, title: &str) {
 }
 
 fn get_previous_window_path() -> PathBuf {
-    let mut path = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    path.push(".config");
-    path.push("tmux-session-switcher");
-
-    if !path.exists() {
-        fs::create_dir_all(&path).expect("Failed to create config directory");
-    }
-
+    let mut path = crate::utils::get_config_dir();
     path.push("previous_window.json");
     path
 }
