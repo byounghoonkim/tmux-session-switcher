@@ -16,6 +16,10 @@ pub(crate) struct PickerConfig {
     pub bell_fg: Option<String>,
 }
 
+const PICKER_HEIGHT_PADDING: usize = 6; // prompt + border + separator + status bar
+const FZF_HEIGHT_PADDING: usize = 5;    // fzf header + border
+const MAX_PICKER_HEIGHT: usize = 40;
+
 fn get_terminal_width() -> u16 {
     if let Some((terminal_size::Width(width), _)) = terminal_size::terminal_size() {
         std::cmp::min(width, 80)
@@ -94,7 +98,7 @@ pub(crate) fn invoke_picker(
 
     // 현재 실행 파일 경로로 display-popup 실행
     let exe = std::env::current_exe().expect("Failed to get current executable path");
-    let height = std::cmp::min(item_strings.len() + 6, 40);
+    let height = std::cmp::min(item_strings.len() + PICKER_HEIGHT_PADDING, MAX_PICKER_HEIGHT);
     let width = get_terminal_width();
     let popup_cmd = format!(
         "{} internal-picker {} {}",
@@ -136,6 +140,8 @@ pub(crate) fn invoke_picker(
     PickerOutput::Cancelled
 }
 
+/// Runs fzf as the picker backend. bell_fg is not supported in the fzf backend;
+/// use `--picker native` for bell row highlighting.
 fn invoke_fzf(
     item_strings: &[String],
     title: &str,
@@ -144,7 +150,7 @@ fn invoke_fzf(
 ) -> PickerOutput {
     use std::process::Stdio;
 
-    let height = std::cmp::min(item_strings.len() + 5, 40);
+    let height = std::cmp::min(item_strings.len() + FZF_HEIGHT_PADDING, MAX_PICKER_HEIGHT);
     let width = get_terminal_width();
 
     let input: String = item_strings.iter().cloned().collect();
