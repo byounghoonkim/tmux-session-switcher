@@ -32,7 +32,7 @@ fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
 
-/// ratatui border 문자열을 tmux display-popup -b 옵션 값으로 변환
+/// Converts a ratatui border string to the tmux display-popup -b option value.
 fn to_tmux_border(border: &str) -> &'static str {
     match border {
         "rounded" => "rounded",
@@ -67,8 +67,8 @@ pub(crate) enum PickerOutput {
     New(String),
 }
 
-/// 아이템 문자열 목록을 받아 tmux display-popup으로 TUI 피커를 실행하고 결과를 반환한다.
-/// tmux 세션 외부에서 호출하면 panic한다.
+/// Runs the native TUI picker via tmux display-popup and returns the result.
+/// Panics if called outside a tmux session.
 pub(crate) fn invoke_picker(
     item_strings: &[String],
     title: &str,
@@ -86,17 +86,17 @@ pub(crate) fn invoke_picker(
         bell_fg,
     };
 
-    // 아이템을 temp file에 직렬화
+    // Serialize config to a temp file for the subprocess.
     let mut items_file = tempfile::NamedTempFile::new().expect("Failed to create items temp file");
     serde_json::to_writer(&items_file, &config).expect("Failed to serialize picker config");
     items_file.flush().expect("Failed to flush items temp file");
     let items_path = items_file.path().to_string_lossy().to_string();
 
-    // 결과를 받을 temp file 생성 (inner process가 여기에 씀)
+    // Temp file where the inner picker process writes its result.
     let result_file = tempfile::NamedTempFile::new().expect("Failed to create result temp file");
     let result_path = result_file.path().to_string_lossy().to_string();
 
-    // 현재 실행 파일 경로로 display-popup 실행
+    // Launch display-popup using the current executable path.
     let exe = std::env::current_exe().expect("Failed to get current executable path");
     let height = std::cmp::min(item_strings.len() + PICKER_HEIGHT_PADDING, MAX_PICKER_HEIGHT);
     let width = get_terminal_width();
@@ -124,7 +124,7 @@ pub(crate) fn invoke_picker(
         .status()
         .expect("Failed to run tmux display-popup");
 
-    // result file 읽기
+    // Read the result written by the inner process.
     let raw = std::fs::read_to_string(result_file.path()).unwrap_or_default();
     let raw = raw.trim();
 

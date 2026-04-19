@@ -21,38 +21,38 @@ pub(crate) enum Action {
 
 pub(crate) fn key_to_action(key: KeyEvent) -> Action {
     match (key.code, key.modifiers) {
-        // 취소
+        // Cancel
         (KeyCode::Char('c'), KeyModifiers::CONTROL) => Action::Cancel,
         (KeyCode::Char('g'), KeyModifiers::CONTROL) => Action::Cancel,
         (KeyCode::Esc, _) => Action::Cancel,
-        // 확인
+        // Confirm
         (KeyCode::Enter, _) => Action::Confirm,
-        // 위로 이동
+        // Move up
         (KeyCode::Up, _) => Action::MoveUp,
         (KeyCode::Char('k'), KeyModifiers::CONTROL) => Action::MoveUp,
         (KeyCode::Char('p'), KeyModifiers::CONTROL) => Action::MoveUp,
         (KeyCode::BackTab, _) => Action::MoveUp,
-        // 아래로 이동
+        // Move down
         (KeyCode::Down, _) => Action::MoveDown,
         (KeyCode::Char('j'), KeyModifiers::CONTROL) => Action::MoveDown,
         (KeyCode::Char('n'), KeyModifiers::CONTROL) => Action::MoveDown,
         (KeyCode::Tab, _) => Action::MoveDown,
-        // 페이지
+        // Pagination
         (KeyCode::PageUp, _) => Action::PageUp,
         (KeyCode::PageDown, _) => Action::PageDown,
-        // 커서 이동
+        // Cursor movement
         (KeyCode::Left, _) => Action::CursorLeft,
         (KeyCode::Char('b'), KeyModifiers::CONTROL) => Action::CursorLeft,
         (KeyCode::Right, _) => Action::CursorRight,
         (KeyCode::Char('f'), KeyModifiers::CONTROL) => Action::CursorRight,
         (KeyCode::Char('a'), KeyModifiers::CONTROL) => Action::CursorToStart,
         (KeyCode::Char('e'), KeyModifiers::CONTROL) => Action::CursorToEnd,
-        // 삭제
+        // Delete
         (KeyCode::Backspace, _) => Action::DeleteCharBackward,
         (KeyCode::Char('h'), KeyModifiers::CONTROL) => Action::DeleteCharBackward,
         (KeyCode::Char('w'), KeyModifiers::CONTROL) => Action::DeleteWordBackward,
         (KeyCode::Char('u'), KeyModifiers::CONTROL) => Action::DeleteToStart,
-        // 문자 입력
+        // Character input
         (KeyCode::Char(c), KeyModifiers::NONE) => Action::InsertChar(c),
         (KeyCode::Char(c), KeyModifiers::SHIFT) => Action::InsertChar(c),
         _ => Action::Noop,

@@ -12,9 +12,9 @@ impl FuzzyFilter {
         }
     }
 
-    /// query가 비어있으면 전체 인덱스를 순서대로, 매칭 위치는 빈 Vec으로 반환.
-    /// 아닌 경우 매칭되는 인덱스를 점수 내림차순으로, 각 아이템의 매칭된 글자 위치(char index)도 함께 반환.
-    /// 쿼리가 비어있으면 매칭 위치는 빈 Vec.
+    /// If the query is empty, returns all indices in order with empty match position vecs.
+    /// Otherwise returns matching indices sorted by score descending, each paired with
+    /// the char positions of matched characters.
     pub(crate) fn filter_with_indices(
         &mut self,
         query: &str,

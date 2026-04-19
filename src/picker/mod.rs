@@ -30,15 +30,15 @@ pub(crate) struct PickerConfig {
 }
 
 pub(crate) enum PickerResult {
-    Selected(usize),   // items 내 인덱스
-    New(String),       // 매칭 없는 쿼리 → 새 창 이름
+    Selected(usize),   // index into items
+    New(String),       // unmatched query → new window name
     Cancelled,
 }
 
-/// tmux display-popup 내에서 실행되는 TUI 피커.
-/// PickerConfig를 받아 사용자 선택 결과를 반환한다.
+/// TUI picker that runs inside a tmux display-popup.
+/// Takes a PickerConfig and returns the user's selection.
 pub(crate) fn run(config: PickerConfig) -> PickerResult {
-    // 패닉 시 터미널 복원을 위한 훅
+    // Hook to restore terminal state if a panic occurs.
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         let _ = disable_raw_mode();
@@ -65,7 +65,7 @@ fn run_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     config: PickerConfig,
 ) -> PickerResult {
-    // config.items를 이동시키기 전에 나머지 필드를 먼저 추출
+    // Destructure config before moving items into PickerState.
     let PickerConfig { items, title, border, layout, theme: theme_name, bell_fg } = config;
     let mut theme = Theme::from_name(&theme_name);
     if let Some(ref hex) = bell_fg {

@@ -51,7 +51,7 @@ impl Theme {
         Self {
             prompt_fg: Color::Rgb(136, 192, 208),    // nord8
             separator_fg: Color::Rgb(76, 86, 106),   // nord3
-            status_fg: Color::Rgb(97, 110, 136),     // nord3/4 사이
+            status_fg: Color::Rgb(97, 110, 136),     // between nord3 and nord4
             highlight_bg: Color::Rgb(59, 66, 82),    // nord1
             highlight_fg: Color::Rgb(136, 192, 208), // nord8
             item_fg: Color::Rgb(216, 222, 233),      // nord4

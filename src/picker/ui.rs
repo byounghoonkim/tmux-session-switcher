@@ -9,8 +9,7 @@ use ratatui::{
 use super::state::PickerState;
 use super::theme::Theme;
 
-/// 텍스트를 매칭 위치에 따라 일반/매칭 Span으로 분리.
-/// is_selected=true이면 모든 Span에 highlight_bg를 명시해 List::highlight_style 간섭을 방지.
+/// Splits text into normal/match Spans based on match positions.
 fn highlight_spans<'a>(
     text: &str,
     positions: &[u32],
@@ -42,8 +41,8 @@ fn highlight_spans<'a>(
     Line::from(spans)
 }
 
-/// layout = "default": 프롬프트 상단, 리스트 하단
-/// layout = "reverse": 프롬프트 하단, 리스트 상단 (fzf --layout=reverse 동작)
+/// layout = "default": prompt at top, list below
+/// layout = "reverse": prompt at bottom, list above (mirrors fzf --layout=reverse)
 pub(crate) fn render(
     frame: &mut Frame,
     state: &PickerState,
@@ -56,17 +55,16 @@ pub(crate) fn render(
     let area = frame.area();
     let inner = Block::default().inner(area);
 
-    // 프롬프트 영역: ">" + 쿼리
+    // Prompt area: ">" + current query
     let prompt_text = format!("> {}", state.query);
     let prompt = Paragraph::new(prompt_text).style(Style::default().fg(theme.prompt_fg));
 
-    // 구분선
+    // Separator line
     let sep_char = "─".repeat(inner.width as usize);
     let sep = Paragraph::new(sep_char).style(Style::default().fg(theme.separator_fg));
 
-    // 리스트 아이템 (매칭 글자 하이라이팅)
-    // List::highlight_style은 Span 스타일을 덮어쓰므로 사용하지 않음.
-    // 선택된 행은 Span에 직접 highlight_bg/fg를 적용해 매칭 색상이 보이도록 함.
+    // List items with fuzzy match character highlighting.
+    // List::highlight_style overwrites Span styles, so we apply highlight_bg/fg directly to each Span.
     let selected_rank = list_state.selected().unwrap_or(0);
     let list_items: Vec<ListItem> = state
         .filtered
@@ -99,13 +97,13 @@ pub(crate) fn render(
 
     let list = List::new(list_items).highlight_symbol("> ");
 
-    // 상태 표시줄
+    // Status bar
     let status_text = format!("  {}/{}", state.filtered.len(), state.items.len());
     let status = Paragraph::new(status_text).style(Style::default().fg(theme.status_fg));
 
     let prompt_chunk;
     if layout == "reverse" {
-        // reverse: 리스트 상단, 프롬프트 하단
+        // reverse: list at top, prompt at bottom
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -122,7 +120,7 @@ pub(crate) fn render(
         frame.render_widget(prompt, chunks[3]);
         prompt_chunk = chunks[3];
     } else {
-        // default: 프롬프트 상단, 리스트 하단
+        // default: prompt at top, list at bottom
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([

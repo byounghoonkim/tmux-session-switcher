@@ -260,7 +260,7 @@ fn main() {
                             .expect("Failed to write result");
                     }
                     picker::PickerResult::Cancelled => {
-                        // 결과 파일 미작성 → outer process가 Cancelled로 처리
+                        // No result file written — outer process treats missing file as Cancelled.
                     }
                 }
             }
