@@ -25,11 +25,8 @@ impl Switchable for PreviousWindow {
 
 impl std::fmt::Display for PreviousWindow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "{:15} - {:3} - {} 🔙",
-            self.session_name, self.index, self.name
-        )
+        let base = crate::tmux::format_window_base(&self.session_name, &self.index, &self.name);
+        writeln!(f, "{} 🔙", base)
     }
 }
 

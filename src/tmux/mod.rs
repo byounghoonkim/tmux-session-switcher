@@ -36,6 +36,10 @@ fn run_command(args: &[&str]) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+pub(crate) fn format_window_base(session: &str, index: &str, name: &str) -> String {
+    format!("{:15} - {:>3} - {}", session, index, name)
+}
+
 pub(crate) fn get_running_windows(current_session: &str) -> Result<Vec<window::Window>, String> {
     let fields = concat!(
         "#{session_name}|",
@@ -141,5 +145,19 @@ mod tests {
     fn test_get_running_windows_returns_result() {
         // Compile-time check: the return type must be Result<Vec<window::Window>, String>.
         let _: fn(&str) -> Result<Vec<window::Window>, String> = get_running_windows;
+    }
+
+    #[test]
+    fn test_format_window_base_pads_session() {
+        let result = format_window_base("main", "3", "editor");
+        // "main" = 4 chars, padded to 15 = 11 trailing spaces, then " - ", then "3" right-aligned in 3 = "  3"
+        assert_eq!(result, "main            -   3 - editor");
+    }
+
+    #[test]
+    fn test_format_window_base_long_session() {
+        let result = format_window_base("verylongsessionname", "10", "term");
+        // long session overflows :15 padding, index "10" gets 1 leading space in :>3
+        assert_eq!(result, "verylongsessionname -  10 - term");
     }
 }

@@ -54,14 +54,11 @@ impl Switchable for Favorite {
 
 impl std::fmt::Display for Favorite {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "{:15} - {:3} - {} ⭐️ {}",
-            self.session_name.as_ref().unwrap_or(&"".to_string()),
-            self.index.map(|i| i.to_string()).unwrap_or_default(),
-            self.name,
-            self.path.as_ref().unwrap_or(&"".to_string()),
-        )
+        let session = self.session_name.as_deref().unwrap_or("");
+        let index = self.index.map(|i| i.to_string()).unwrap_or_default();
+        let base = crate::tmux::format_window_base(session, &index, &self.name);
+        let path = self.path.as_deref().unwrap_or("");
+        writeln!(f, "{} ⭐️ {}", base, path)
     }
 }
 

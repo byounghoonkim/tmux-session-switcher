@@ -29,12 +29,11 @@ impl Switchable for Window {
 
 impl std::fmt::Display for Window {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let base = crate::tmux::format_window_base(&self.session_name, &self.index, &self.name);
         writeln!(
             f,
-            "{:15} - {:3} - {}{}{}{}",
-            self.session_name,
-            self.index,
-            self.name,
+            "{}{}{}{}",
+            base,
             if self.active { " 🟢" } else { "" },
             if self.marked { " ♥️" } else { "" },
             if self.bell { " 🔔" } else { "" },
