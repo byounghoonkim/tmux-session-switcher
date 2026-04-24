@@ -38,8 +38,6 @@ impl Switchable for Favorite {
         args.push("-n".to_string());
         args.push(self.name.to_string());
 
-        //args.push("-P".to_string()); // -P : print the info of the new window to stdout
-
         if let Some(path) = &self.path {
             args.push("-c".to_string());
             args.push(path.to_string());
