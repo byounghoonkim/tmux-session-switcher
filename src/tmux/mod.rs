@@ -1,3 +1,5 @@
+use std::cmp::Ordering::Greater;
+use std::cmp::Ordering::Less;
 use std::fmt::Display;
 use std::fs;
 use std::path::PathBuf;
@@ -45,6 +47,17 @@ fn run_command(args: &[&str]) -> Result<String, String> {
 
 pub(crate) fn format_window_base(session: &str, index: &str, name: &str) -> String {
     format!("{:15} - {:>3} - {}", session, index, name)
+}
+
+pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
+    items.sort_by(|a, b| {
+        if a.sort_priority() > b.sort_priority() {
+            return Greater;
+        } else if a.sort_priority() < b.sort_priority() {
+            return Less;
+        }
+        std::cmp::Ordering::Equal
+    });
 }
 
 pub(crate) fn get_running_windows(current_session: &str) -> Result<Vec<window::Window>, String> {

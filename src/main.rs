@@ -2,10 +2,10 @@ use clap::Parser;
 
 use args::{Args, Commands, FavoriteCommands};
 use config::Config;
-use fzf::{select_item, sort_by_priority};
+use fzf::select_item;
 use tmux::{
     Item, create_new_window, get_current_session, get_current_window, get_running_windows,
-    load_previous_window, save_previous_window,
+    load_previous_window, save_previous_window, sort_by_priority,
 };
 use utils::expand_tilde;
 

@@ -1,10 +1,7 @@
-use std::cmp::Ordering::Greater;
-use std::cmp::Ordering::Less;
 use std::fmt::Display;
 use std::io::Write;
 use std::process::Command;
 
-use super::tmux::SortPriority;
 use crate::picker::PickerConfig as InternalPickerConfig;
 
 pub(crate) struct PickerConfig {
@@ -42,17 +39,6 @@ fn to_tmux_border(border: &str) -> &'static str {
         "none" => "none",
         _ => "single",
     }
-}
-
-pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
-    items.sort_by(|a, b| {
-        if a.sort_priority() > b.sort_priority() {
-            return Greater;
-        } else if a.sort_priority() < b.sort_priority() {
-            return Less;
-        }
-        std::cmp::Ordering::Equal
-    });
 }
 
 pub(crate) enum SelectItemReturn<'a, T> {
