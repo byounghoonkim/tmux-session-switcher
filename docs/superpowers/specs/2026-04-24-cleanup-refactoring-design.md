@@ -107,18 +107,20 @@ The call in `picker/mod.rs` drops the two corresponding arguments.
 `sort_by_priority()` operates on `SortPriority` implementors, which is a trait defined in `tmux/mod.rs`. Moving the function there co-locates the trait and its primary utility.
 
 ```rust
-// Removed from src/fzf.rs
-// Added to src/tmux/mod.rs
+// Removed from src/fzf.rs, moved verbatim to src/tmux/mod.rs
 pub(crate) fn sort_by_priority<T: SortPriority + ?Sized>(items: &mut [Box<T>]) {
     items.sort_by(|a, b| {
-        a.sort_priority()
-            .partial_cmp(&b.sort_priority())
-            .unwrap_or(std::cmp::Ordering::Equal)
+        if a.sort_priority() > b.sort_priority() {
+            return std::cmp::Ordering::Greater;
+        } else if a.sort_priority() < b.sort_priority() {
+            return std::cmp::Ordering::Less;
+        }
+        std::cmp::Ordering::Equal
     });
 }
 ```
 
-Note: the existing implementation uses manual `Greater`/`Less` branches. The replacement uses `partial_cmp` which is idiomatic for `f32` comparison.
+The implementation is moved verbatim — no behavioral change.
 
 `main.rs` import changes:
 
