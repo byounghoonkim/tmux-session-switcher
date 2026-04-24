@@ -46,8 +46,6 @@ fn highlight_spans<'a>(
 pub(crate) fn render(
     frame: &mut Frame,
     state: &PickerState,
-    _title: &str,
-    _border: &str,
     layout: &str,
     theme: &Theme,
     list_state: &mut ListState,

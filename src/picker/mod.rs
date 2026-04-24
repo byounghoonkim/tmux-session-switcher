@@ -66,7 +66,7 @@ fn run_loop<B: ratatui::backend::Backend>(
     config: PickerConfig,
 ) -> PickerResult {
     // Destructure config before moving items into PickerState.
-    let PickerConfig { items, title, border, layout, theme: theme_name, bell_fg } = config;
+    let PickerConfig { items, layout, theme: theme_name, bell_fg, .. } = config;
     let mut theme = Theme::from_name(&theme_name);
     if let Some(ref hex) = bell_fg {
         if let Some(color) = theme::parse_hex_color(hex) {
@@ -80,7 +80,7 @@ fn run_loop<B: ratatui::backend::Backend>(
 
     loop {
         terminal
-            .draw(|f| ui::render(f, &state, &title, &border, &layout, &theme, &mut list_state))
+            .draw(|f| ui::render(f, &state, &layout, &theme, &mut list_state))
             .expect("Failed to draw");
 
         if let Event::Key(key) = event::read().expect("Failed to read event") {
