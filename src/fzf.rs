@@ -71,24 +71,20 @@ pub(crate) enum PickerOutput {
 /// Panics if called outside a tmux session.
 pub(crate) fn invoke_picker(
     item_strings: &[String],
-    title: &str,
-    border: &str,
-    layout: &str,
-    theme: &str,
-    bell_fg: Option<String>,
+    config: &PickerConfig,
 ) -> PickerOutput {
-    let config = InternalPickerConfig {
+    let internal_config = InternalPickerConfig {
         items: item_strings.to_vec(),
-        title: title.to_string(),
-        border: border.to_string(),
-        layout: layout.to_string(),
-        theme: theme.to_string(),
-        bell_fg,
+        title: config.title.clone(),
+        border: config.border.clone(),
+        layout: config.layout.clone(),
+        theme: config.theme.clone(),
+        bell_fg: config.bell_fg.clone(),
     };
 
     // Serialize config to a temp file for the subprocess.
     let mut items_file = tempfile::NamedTempFile::new().expect("Failed to create items temp file");
-    serde_json::to_writer(&items_file, &config).expect("Failed to serialize picker config");
+    serde_json::to_writer(&items_file, &internal_config).expect("Failed to serialize picker config");
     items_file.flush().expect("Failed to flush items temp file");
     let items_path = items_file.path().to_string_lossy().to_string();
 
@@ -116,9 +112,9 @@ pub(crate) fn invoke_picker(
             "-h",
             &height.to_string(),
             "-b",
-            to_tmux_border(border),
+            to_tmux_border(&config.border),
             "-T",
-            &format!(" {} ", title),
+            &format!(" {} ", config.title),
             &popup_cmd,
         ])
         .status()
@@ -144,9 +140,7 @@ pub(crate) fn invoke_picker(
 /// use `--picker native` for bell row highlighting.
 fn invoke_fzf(
     item_strings: &[String],
-    title: &str,
-    border: &str,
-    layout: &str,
+    config: &PickerConfig,
 ) -> PickerOutput {
     use std::process::Stdio;
 
@@ -159,10 +153,10 @@ fn invoke_fzf(
         .args([
             "--tmux",
             &format!("{},{}", width, height),
-            &format!("--layout={}", layout),
-            &format!("--border={}", border),
+            &format!("--layout={}", config.layout),
+            &format!("--border={}", config.border),
             "--border-label",
-            &format!(" {} ", title),
+            &format!(" {} ", config.title),
             "--prompt",
             "⚡",
             "--bind",
@@ -211,16 +205,9 @@ pub(crate) fn dispatch_picker(
     config: &PickerConfig,
 ) -> PickerOutput {
     if config.use_fzf {
-        invoke_fzf(item_strings, &config.title, &config.border, &config.layout)
+        invoke_fzf(item_strings, config)
     } else {
-        invoke_picker(
-            item_strings,
-            &config.title,
-            &config.border,
-            &config.layout,
-            &config.theme,
-            config.bell_fg.clone(),
-        )
+        invoke_picker(item_strings, config)
     }
 }
 
