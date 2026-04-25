@@ -5,9 +5,29 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use super::state::PickerState;
 use super::theme::Theme;
+
+#[allow(dead_code)]
+fn truncate_to_width(s: &str, max_width: usize) -> String {
+    if UnicodeWidthStr::width(s) <= max_width {
+        return s.to_string();
+    }
+    let target = max_width.saturating_sub(1); // reserve 1 col for "…"
+    let mut width = 0usize;
+    let mut byte_end = 0usize;
+    for (byte_pos, ch) in s.char_indices() {
+        let cw = UnicodeWidthChar::width(ch).unwrap_or(1);
+        if width + cw > target {
+            break;
+        }
+        width += cw;
+        byte_end = byte_pos + ch.len_utf8();
+    }
+    format!("{}…", &s[..byte_end])
+}
 
 /// Splits text into normal/match Spans based on match positions.
 fn highlight_spans<'a>(
@@ -138,4 +158,37 @@ pub(crate) fn render(
     // Render cursor at current query position
     let visual_col = state.query[..state.cursor].chars().count() as u16;
     frame.set_cursor_position((prompt_chunk.x + 2 + visual_col, prompt_chunk.y));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_short_string_unchanged() {
+        assert_eq!(truncate_to_width("hello", 10), "hello");
+    }
+
+    #[test]
+    fn test_truncate_exact_fit_unchanged() {
+        assert_eq!(truncate_to_width("hello", 5), "hello");
+    }
+
+    #[test]
+    fn test_truncate_ascii_adds_ellipsis() {
+        // max=8, target=7: "hello w" fits (7 cols), "hello w…" = 8 display cols
+        assert_eq!(truncate_to_width("hello world", 8), "hello w…");
+    }
+
+    #[test]
+    fn test_truncate_wide_chars() {
+        // "你好世界" — each CJK char is 2 cols wide (total 8 cols)
+        // max=5, target=4: "你好" = 4 cols fits, next "世" would be 6 → "你好…"
+        assert_eq!(truncate_to_width("你好世界", 5), "你好…");
+    }
+
+    #[test]
+    fn test_truncate_empty_string_unchanged() {
+        assert_eq!(truncate_to_width("", 5), "");
+    }
 }
