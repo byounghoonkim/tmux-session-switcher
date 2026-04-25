@@ -19,6 +19,8 @@ use input::{Action, key_to_action};
 use state::PickerState;
 use theme::Theme;
 
+const PAGE_SIZE: usize = 10;
+
 #[derive(Serialize, Deserialize)]
 pub(crate) struct PickerConfig {
     pub items: Vec<String>,
@@ -119,25 +121,14 @@ fn run_loop<B: ratatui::backend::Backend>(
                 Action::CursorToStart => state.cursor_to_start(),
                 Action::CursorToEnd => state.cursor_to_end(),
 
-                Action::MoveUp => {
-                    state.move_up();
-                    list_state.select(Some(state.selected));
-                }
-                Action::MoveDown => {
-                    state.move_down();
-                    list_state.select(Some(state.selected));
-                }
-                Action::PageUp => {
-                    state.page_up(10);
-                    list_state.select(Some(state.selected));
-                }
-                Action::PageDown => {
-                    state.page_down(10);
-                    list_state.select(Some(state.selected));
-                }
+                Action::MoveUp => state.move_up(),
+                Action::MoveDown => state.move_down(),
+                Action::PageUp => state.page_up(PAGE_SIZE),
+                Action::PageDown => state.page_down(PAGE_SIZE),
 
                 Action::Noop => {}
             }
+            list_state.select(Some(state.selected));
         }
     }
 }
