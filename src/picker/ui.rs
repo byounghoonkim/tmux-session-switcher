@@ -62,6 +62,8 @@ fn highlight_spans<'a>(
     Line::from(spans)
 }
 
+/// layout = "default": prompt at top, list below
+/// layout = "reverse": prompt at bottom, list above (mirrors fzf --layout=reverse)
 pub(crate) fn render(
     frame: &mut Frame,
     state: &PickerState,
@@ -94,7 +96,8 @@ pub(crate) fn render(
             let raw_text = state.items[i].trim_end();
             let text = truncate_to_width(raw_text, item_width);
             // Drop match positions beyond the visible (non-ellipsis) chars
-            let visible_chars = if text.ends_with('…') {
+            let truncated = text.len() != raw_text.len();
+            let visible_chars = if truncated {
                 text.chars().count().saturating_sub(1)
             } else {
                 text.chars().count()
