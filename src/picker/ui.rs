@@ -10,7 +10,8 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use super::state::PickerState;
 use super::theme::Theme;
 
-#[allow(dead_code)]
+const LAYOUT_REVERSE: &str = "reverse";
+
 fn truncate_to_width(s: &str, max_width: usize) -> String {
     if UnicodeWidthStr::width(s) <= max_width {
         return s.to_string();
@@ -61,8 +62,6 @@ fn highlight_spans<'a>(
     Line::from(spans)
 }
 
-/// layout = "default": prompt at top, list below
-/// layout = "reverse": prompt at bottom, list above (mirrors fzf --layout=reverse)
 pub(crate) fn render(
     frame: &mut Frame,
     state: &PickerState,
@@ -81,6 +80,9 @@ pub(crate) fn render(
     let sep_char = "─".repeat(inner.width as usize);
     let sep = Paragraph::new(sep_char).style(Style::default().fg(theme.separator_fg));
 
+    // Available width for item text (inner width minus 2 for "> " highlight symbol)
+    let item_width = (inner.width as usize).saturating_sub(2);
+
     // List items with fuzzy match character highlighting.
     // List::highlight_style overwrites Span styles, so we apply highlight_bg/fg directly to each Span.
     let selected_rank = list_state.selected().unwrap_or(0);
@@ -89,9 +91,21 @@ pub(crate) fn render(
         .iter()
         .enumerate()
         .map(|(rank, &i)| {
-            let text = state.items[i].trim_end();
-            let positions = state.match_indices.get(rank).map(|v| v.as_slice()).unwrap_or(&[]);
-            let is_bell = text.contains('🔔');
+            let raw_text = state.items[i].trim_end();
+            let text = truncate_to_width(raw_text, item_width);
+            // Drop match positions beyond the visible (non-ellipsis) chars
+            let visible_chars = if text.ends_with('…') {
+                text.chars().count().saturating_sub(1)
+            } else {
+                text.chars().count()
+            };
+            let raw_positions = state.match_indices.get(rank).map(|v| v.as_slice()).unwrap_or(&[]);
+            let filtered_positions: Vec<u32> = raw_positions
+                .iter()
+                .copied()
+                .filter(|&p| (p as usize) < visible_chars)
+                .collect();
+            let is_bell = raw_text.contains('🔔');
             let (normal_style, match_style) = if rank == selected_rank {
                 let fg = if is_bell { theme.bell_fg } else { theme.highlight_fg };
                 (
@@ -108,31 +122,56 @@ pub(crate) fn render(
                     Style::default().fg(theme.match_fg).add_modifier(Modifier::BOLD),
                 )
             };
-            let line = highlight_spans(text, positions, normal_style, match_style);
+            let line = highlight_spans(&text, &filtered_positions, normal_style, match_style);
             ListItem::new(line)
         })
         .collect();
 
     let list = List::new(list_items).highlight_symbol("> ");
 
-    // Status bar
-    let status_text = format!("  {}/{}", state.filtered.len(), state.items.len());
+    // Empty state: shown instead of the list when nothing matches
+    let empty_msg = {
+        let mut lines = vec![Line::from(Span::styled(
+            "  No matches",
+            Style::default().fg(theme.status_fg),
+        ))];
+        if !state.query.is_empty() {
+            lines.push(Line::from(Span::styled(
+                format!("  Press Enter to create '{}'", state.query),
+                Style::default().fg(theme.status_fg),
+            )));
+        }
+        Paragraph::new(lines)
+    };
+
+    // Status bar: [selected_pos/filtered_count] total_count total
+    let pos = if state.filtered.is_empty() { 0 } else { state.selected + 1 };
+    let status_text = format!(
+        "  [{}/{}] {} total",
+        pos,
+        state.filtered.len(),
+        state.items.len(),
+    );
     let status = Paragraph::new(status_text).style(Style::default().fg(theme.status_fg));
 
-    let prompt_chunk = if layout == "reverse" {
+    let prompt_chunk = if layout == LAYOUT_REVERSE {
         // reverse: list at top, prompt at bottom
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(1), // status
-                Constraint::Min(1),    // list
+                Constraint::Min(1),    // list or empty msg
                 Constraint::Length(1), // separator
                 Constraint::Length(1), // prompt
             ])
             .split(inner);
 
         frame.render_widget(status, chunks[0]);
-        frame.render_stateful_widget(list, chunks[1], list_state);
+        if state.filtered.is_empty() {
+            frame.render_widget(empty_msg, chunks[1]);
+        } else {
+            frame.render_stateful_widget(list, chunks[1], list_state);
+        }
         frame.render_widget(sep, chunks[2]);
         frame.render_widget(prompt, chunks[3]);
         chunks[3]
@@ -143,20 +182,24 @@ pub(crate) fn render(
             .constraints([
                 Constraint::Length(1), // prompt
                 Constraint::Length(1), // separator
-                Constraint::Min(1),    // list
+                Constraint::Min(1),    // list or empty msg
                 Constraint::Length(1), // status
             ])
             .split(inner);
 
         frame.render_widget(prompt, chunks[0]);
         frame.render_widget(sep, chunks[1]);
-        frame.render_stateful_widget(list, chunks[2], list_state);
+        if state.filtered.is_empty() {
+            frame.render_widget(empty_msg, chunks[2]);
+        } else {
+            frame.render_stateful_widget(list, chunks[2], list_state);
+        }
         frame.render_widget(status, chunks[3]);
         chunks[0]
     };
 
-    // Render cursor at current query position
-    let visual_col = state.query[..state.cursor].chars().count() as u16;
+    // Wide-char-aware cursor position
+    let visual_col = UnicodeWidthStr::width(&state.query[..state.cursor]) as u16;
     frame.set_cursor_position((prompt_chunk.x + 2 + visual_col, prompt_chunk.y));
 }
 
