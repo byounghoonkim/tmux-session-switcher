@@ -237,4 +237,15 @@ mod tests {
     fn test_truncate_empty_string_unchanged() {
         assert_eq!(truncate_to_width("", 5), "");
     }
+
+    #[test]
+    fn test_truncated_detection_three_byte_char_boundary() {
+        // "abc€" is 4 chars, 6 bytes, width 4. max_width=3 → target=2, fits "ab" (2 cols), result "ab…"
+        // old code: "ab…".len() == 3 == "€".len() → false negative (comparing removed char len, not full string)
+        // new code: "ab…" != "abc€" → correctly true
+        let raw = "abc€";
+        let truncated_text = truncate_to_width(raw, 3);
+        assert_eq!(truncated_text, "ab…");
+        assert!(truncated_text.as_str() != raw, "must detect truncation even when ellipsis matches removed char byte length");
+    }
 }
