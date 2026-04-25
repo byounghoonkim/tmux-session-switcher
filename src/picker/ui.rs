@@ -12,9 +12,10 @@ use super::theme::Theme;
 
 const LAYOUT_REVERSE: &str = "reverse";
 
-fn truncate_to_width(s: &str, max_width: usize) -> String {
+fn truncate_to_width(s: &str, max_width: usize) -> std::borrow::Cow<str> {
+    use std::borrow::Cow;
     if UnicodeWidthStr::width(s) <= max_width {
-        return s.to_string();
+        return Cow::Borrowed(s);
     }
     let target = max_width.saturating_sub(1); // reserve 1 col for "…"
     let mut width = 0usize;
@@ -27,7 +28,7 @@ fn truncate_to_width(s: &str, max_width: usize) -> String {
         width += cw;
         byte_end = byte_pos + ch.len_utf8();
     }
-    format!("{}…", &s[..byte_end])
+    Cow::Owned(format!("{}…", &s[..byte_end]))
 }
 
 /// Splits text into normal/match Spans based on match positions.
@@ -96,7 +97,7 @@ pub(crate) fn render(
             let raw_text = state.items[i].trim_end();
             let text = truncate_to_width(raw_text, item_width);
             // Drop match positions beyond the visible (non-ellipsis) chars
-            let truncated = text.as_str() != raw_text;
+            let truncated = matches!(text, std::borrow::Cow::Owned(_));
             let visible_chars = if truncated {
                 text.chars().count().saturating_sub(1)
             } else {
@@ -212,12 +213,16 @@ mod tests {
 
     #[test]
     fn test_truncate_short_string_unchanged() {
-        assert_eq!(truncate_to_width("hello", 10), "hello");
+        let result = truncate_to_width("hello", 10);
+        assert_eq!(result, "hello");
+        assert!(matches!(result, std::borrow::Cow::Borrowed(_)), "no truncation must return Cow::Borrowed");
     }
 
     #[test]
     fn test_truncate_exact_fit_unchanged() {
-        assert_eq!(truncate_to_width("hello", 5), "hello");
+        let result = truncate_to_width("hello", 5);
+        assert_eq!(result, "hello");
+        assert!(matches!(result, std::borrow::Cow::Borrowed(_)), "exact fit must return Cow::Borrowed");
     }
 
     #[test]
@@ -242,11 +247,12 @@ mod tests {
     fn test_truncated_detection_three_byte_char_boundary() {
         // "a你" = 4 bytes (1 + 3). max_width=2 → target=1: 'a' fits (1 col), '你' (2 col wide) exceeds → "a…" = 4 bytes
         // old code: "a…".len() == 4 == "a你".len() → false negative (fails to detect truncation)
-        // new code: "a…" != "a你" → correctly detects truncation
+        // new code: Cow::Owned variant → correctly detects truncation
         let raw = "a你";
         let truncated_text = truncate_to_width(raw, 2);
         assert_eq!(truncated_text, "a…");
+        assert!(matches!(truncated_text, std::borrow::Cow::Owned(_)), "truncation must return Cow::Owned");
+        // byte lengths are equal, demonstrating why content comparison (not byte-length) is needed:
         assert_eq!(truncated_text.len(), raw.len(), "byte lengths are equal — old byte-length check would fail");
-        assert!(truncated_text.as_str() != raw, "content comparison must detect truncation");
     }
 }
