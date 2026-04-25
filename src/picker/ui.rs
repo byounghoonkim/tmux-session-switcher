@@ -96,7 +96,7 @@ pub(crate) fn render(
             let raw_text = state.items[i].trim_end();
             let text = truncate_to_width(raw_text, item_width);
             // Drop match positions beyond the visible (non-ellipsis) chars
-            let truncated = text.len() != raw_text.len();
+            let truncated = text.as_str() != raw_text;
             let visible_chars = if truncated {
                 text.chars().count().saturating_sub(1)
             } else {
