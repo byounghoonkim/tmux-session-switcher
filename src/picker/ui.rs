@@ -5,6 +5,8 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
+use std::borrow::Cow;
+
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use super::state::PickerState;
@@ -12,8 +14,7 @@ use super::theme::Theme;
 
 const LAYOUT_REVERSE: &str = "reverse";
 
-fn truncate_to_width(s: &str, max_width: usize) -> std::borrow::Cow<str> {
-    use std::borrow::Cow;
+fn truncate_to_width(s: &str, max_width: usize) -> Cow<str> {
     if UnicodeWidthStr::width(s) <= max_width {
         return Cow::Borrowed(s);
     }
@@ -97,7 +98,7 @@ pub(crate) fn render(
             let raw_text = state.items[i].trim_end();
             let text = truncate_to_width(raw_text, item_width);
             // Drop match positions beyond the visible (non-ellipsis) chars
-            let truncated = matches!(text, std::borrow::Cow::Owned(_));
+            let truncated = matches!(text, Cow::Owned(_));
             let visible_chars = if truncated {
                 text.chars().count().saturating_sub(1)
             } else {
@@ -215,14 +216,14 @@ mod tests {
     fn test_truncate_short_string_unchanged() {
         let result = truncate_to_width("hello", 10);
         assert_eq!(result, "hello");
-        assert!(matches!(result, std::borrow::Cow::Borrowed(_)), "no truncation must return Cow::Borrowed");
+        assert!(matches!(result, Cow::Borrowed(_)), "no truncation must return Cow::Borrowed");
     }
 
     #[test]
     fn test_truncate_exact_fit_unchanged() {
         let result = truncate_to_width("hello", 5);
         assert_eq!(result, "hello");
-        assert!(matches!(result, std::borrow::Cow::Borrowed(_)), "exact fit must return Cow::Borrowed");
+        assert!(matches!(result, Cow::Borrowed(_)), "exact fit must return Cow::Borrowed");
     }
 
     #[test]
@@ -251,7 +252,7 @@ mod tests {
         let raw = "a你";
         let truncated_text = truncate_to_width(raw, 2);
         assert_eq!(truncated_text, "a…");
-        assert!(matches!(truncated_text, std::borrow::Cow::Owned(_)), "truncation must return Cow::Owned");
+        assert!(matches!(truncated_text, Cow::Owned(_)), "truncation must return Cow::Owned");
         // byte lengths are equal, demonstrating why content comparison (not byte-length) is needed:
         assert_eq!(truncated_text.len(), raw.len(), "byte lengths are equal — old byte-length check would fail");
     }
