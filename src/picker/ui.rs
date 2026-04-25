@@ -240,12 +240,13 @@ mod tests {
 
     #[test]
     fn test_truncated_detection_three_byte_char_boundary() {
-        // "abc€" is 4 chars, 6 bytes, width 4. max_width=3 → target=2, fits "ab" (2 cols), result "ab…"
-        // old code: "ab…".len() == 3 == "€".len() → false negative (comparing removed char len, not full string)
-        // new code: "ab…" != "abc€" → correctly true
-        let raw = "abc€";
-        let truncated_text = truncate_to_width(raw, 3);
-        assert_eq!(truncated_text, "ab…");
-        assert!(truncated_text.as_str() != raw, "must detect truncation even when ellipsis matches removed char byte length");
+        // "a你" = 4 bytes (1 + 3). max_width=2 → target=1: 'a' fits (1 col), '你' (2 col wide) exceeds → "a…" = 4 bytes
+        // old code: "a…".len() == 4 == "a你".len() → false negative (fails to detect truncation)
+        // new code: "a…" != "a你" → correctly detects truncation
+        let raw = "a你";
+        let truncated_text = truncate_to_width(raw, 2);
+        assert_eq!(truncated_text, "a…");
+        assert_eq!(truncated_text.len(), raw.len(), "byte lengths are equal — old byte-length check would fail");
+        assert!(truncated_text.as_str() != raw, "content comparison must detect truncation");
     }
 }
